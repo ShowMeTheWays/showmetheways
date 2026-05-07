@@ -6,223 +6,251 @@
     <title>Indoor AR Pro - Smart Navigation</title>
     
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
 
     <style>
         :root {
             --primary: #1a73e8; /* Google Blue */
-            --glass: rgba(255, 255, 255, 0.85);
+            --record: #ea4335; /* Google Red */
+            --glass: rgba(255, 255, 255, 0.9);
             --shadow: 0 8px 32px rgba(0,0,0,0.15);
         }
 
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; font-family: 'Sarabun', sans-serif;
-            background-color: #000; /* กันหน้าขาว */
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Sarabun', sans-serif; background: #000; }
 
-        /* UI Overlay Structure */
-        .app-ui {
+        .ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 100; pointer-events: none;
-            display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 100; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        /* Header Style */
-        .app-header {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
+        .header-box {
+            background: var(--glass); backdrop-filter: blur(10px);
             margin: 15px; padding: 15px; border-radius: 20px;
-            box-shadow: var(--shadow); pointer-events: auto;
-            text-align: center; border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: var(--shadow); pointer-events: auto; text-align: center;
         }
 
-        .status-dot {
-            display: inline-block; width: 8px; height: 8px; 
-            background: #34a853; border-radius: 50%; margin-right: 5px;
+        .footer-box {
+            background: var(--glass); backdrop-filter: blur(15px);
+            padding: 20px; border-top-left-radius: 25px; border-top-right-radius: 25px; pointer-events: auto;
         }
 
-        /* Footer Style */
-        .app-footer {
-            background: var(--glass);
-            backdrop-filter: blur(15px);
-            padding: 25px 20px 35px 20px;
-            border-top-left-radius: 30px; border-top-right-radius: 30px;
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
-            pointer-events: auto;
+        input, select, button {
+            width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #ddd;
+            font-size: 16px; margin-bottom: 10px; font-family: 'Sarabun'; outline: none; box-sizing: border-box;
         }
 
-        select {
-            width: 100%; padding: 15px; border-radius: 15px;
-            border: 1px solid #ddd; font-size: 16px; appearance: none;
-            background: white url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23666" d="M7 10l5 5 5-5z"/></svg>') no-repeat right 15px center;
-            margin-bottom: 15px; outline: none;
+        .btn-primary { background: var(--primary); color: white; font-weight: bold; border: none; box-shadow: 0 4px 10px rgba(26,115,232,0.3); }
+        .btn-record { background: var(--record); color: white; font-weight: bold; border: none; box-shadow: 0 4px 10px rgba(234,67,53,0.3); }
+        
+        .mode-switch {
+            position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5);
+            color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; pointer-events: auto; cursor: pointer;
         }
 
-        .btn-primary {
-            width: 100%; padding: 16px; border-radius: 15px;
-            background: var(--primary); color: white; font-weight: 600;
-            border: none; font-size: 16px; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3);
-            transition: transform 0.2s;
-        }
-
-        .btn-primary:active { transform: scale(0.98); }
-
-        /* AR Elements Style */
-        #ar-canvas-container { position: absolute; top: 0; left: 0; z-index: 0; }
-
-        /* Splash Screen */
         #splash {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 1000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; transition: 0.5s;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white;
+            z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
+        
+        /* สไตล์หน้าจอแอดมิน */
+        #admin-panel { display: none; }
     </style>
 </head>
 <body>
 
     <div id="splash">
-        <div style="font-size: 50px; color: var(--primary); margin-bottom: 20px;">
-            <i class="fa-solid fa-compass-drafting fa-spin"></i>
-        </div>
-        <h2 style="color: #333; margin: 0;">Indoor AR Pro</h2>
-        <p style="color: #666;">กำลังเตรียมระบบนำทางเสมือนจริง...</p>
-        <button class="btn-primary" onclick="initAR()" style="width: 200px; margin-top: 30px;">เริ่มใช้งาน</button>
+        <i class="fa-solid fa-map-location-dot" style="font-size: 60px; color: var(--primary); margin-bottom: 20px;"></i>
+        <h2>ระบบนำทางอัจฉริยะ</h2>
+        <p style="color: #666; margin-bottom: 30px;">เตรียมพร้อมเข้าสู่โลก AR</p>
+        <button class="btn-primary" onclick="initApp()" style="width: 80%;">เริ่มใช้งานระบบ</button>
     </div>
 
-    <div class="app-ui">
-        <div class="app-header">
-            <div id="nav-info">
-                <span class="status-dot"></span>
-                <span id="target-name" style="font-weight: 600;">รอกำหนดจุดหมาย</span>
-            </div>
-            <div id="dist-info" style="font-size: 13px; color: #555; margin-top: 5px;">
-                ระบุพิกัดด้วยเซนเซอร์ความแม่นยำสูง
-            </div>
+    <div class="ui-layer" id="user-panel">
+        <div class="mode-switch" onclick="toggleMode()"><i class="fa-solid fa-gear"></i> สร้างเส้นทาง</div>
+        <div class="header-box">
+            <h3 id="target-name" style="margin: 0; color: var(--primary);">จุดหมายปลายทาง</h3>
+            <p id="dist-info" style="margin: 5px 0 0 0; font-size: 14px; color: #666;">กรุณาเลือกสถานที่จากเมนูด้านล่าง</p>
         </div>
-
-        <div class="app-footer">
-            <label style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; display: block;">เลือกสถานที่ปลายทาง</label>
+        <div class="footer-box">
             <select id="dest-dropdown">
-                <option value="">-- ค้นหาชื่อห้องหรือแผนก --</option>
+                <option value="">-- ค้นหาห้องหรือแผนก --</option>
             </select>
-            <button class="btn-primary" onclick="confirmArrival()">
-                <i class="fa-solid fa-check-circle"></i> ฉันถึงที่หมายแล้ว
+        </div>
+    </div>
+
+    <div class="ui-layer" id="admin-panel">
+        <div class="mode-switch" onclick="toggleMode()"><i class="fa-solid fa-xmark"></i> ปิดโหมดแอดมิน</div>
+        <div class="header-box" style="border: 2px solid var(--record);">
+            <h3 style="margin: 0; color: var(--record);"><i class="fa-solid fa-record-vinyl"></i> โหมดบันทึกเส้นทาง</h3>
+            <p id="record-status" style="margin: 5px 0 0 0; font-size: 14px;">จำนวนจุดที่บันทึกแล้ว: 0 จุด</p>
+        </div>
+        <div class="footer-box">
+            <input type="text" id="new-room-name" placeholder="ชื่อห้อง/จุดหมาย (เช่น ห้องตรวจ A)">
+            <button class="btn-primary" onclick="addNode()" style="background: #34a853; margin-bottom: 10px;">
+                <i class="fa-solid fa-location-crosshairs"></i> วางจุด (Node) ตรงนี้
+            </button>
+            <button class="btn-record" onclick="saveRoute()">
+                <i class="fa-solid fa-cloud-arrow-up"></i> บันทึกเส้นทางทั้งหมด
             </button>
         </div>
     </div>
 
-    <a-scene 
-        embedded 
-        arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;" 
-        vr-mode-ui="enabled: false"
-        renderer="logarithmicDepthBuffer: true; antialias: true;">
-        
-        <a-camera id="main-camera" rotation-reader position="0 1.6 0"></a-camera>
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true;" vr-mode-ui="enabled: false">
+        <a-camera id="main-camera" rotation-reader></a-camera>
         <a-entity id="ar-world-container"></a-entity>
     </a-scene>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbz6lcvIMQ8mNbfZSL6gQ3cphjMXUEMfQTKCz4RC3V6ULdQ4nrXIRitHsVfqLXtn1aOlRw/exec";
-        let userPos = { x: 50, y: 90 }; 
-        let locations = [];
+        // *** เอา URL จาก Apps Script มาใส่ตรงนี้ ***
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxNUiCFErSC5my8UbPfsSxH1QKfIaaMSq2qZM91yVv8_jMvPvDUW-CuNxgq_LTJXU2-Gw/exec"; 
+        
+        let pathsData = []; // เก็บข้อมูลเส้นทางทั้งหมดที่โหลดมา
+        let recordingNodes = []; // เก็บจุดที่แอดมินกำลังเดินบันทึก
+        let isAdminMode = false;
+        
+        let currentCompass = 0;
+        let myPos = { x: 0, z: 0 }; // พิกัดจำลองของเราในระบบ
 
-        async function initAR() {
-            // ขอสิทธิ์เซนเซอร์ทิศทาง (iOS)
+        async function initApp() {
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 await DeviceOrientationEvent.requestPermission();
             }
+            window.addEventListener('deviceorientation', (e) => {
+                currentCompass = e.webkitCompassHeading || (360 - e.alpha);
+            });
 
+            document.getElementById('splash').style.display = 'none';
+            loadRoutes();
+        }
+
+        // 1. โหลดข้อมูลเส้นทางมาใส่ Dropdown
+        async function loadRoutes() {
             try {
                 const res = await fetch(GAS_URL);
-                locations = await res.json();
+                pathsData = await res.json();
                 
                 const dropdown = document.getElementById('dest-dropdown');
-                locations.forEach(loc => {
+                dropdown.innerHTML = '<option value="">-- ค้นหาห้องหรือแผนก --</option>'; // Reset
+                
+                pathsData.forEach(path => {
                     const opt = document.createElement('option');
-                    opt.value = JSON.stringify(loc);
-                    opt.text = `📍 ${loc.name} (ชั้น ${loc.floor})`;
+                    opt.value = path.id;
+                    opt.text = `📍 ${path.name}`;
                     dropdown.appendChild(opt);
                 });
+            } catch (err) { console.log("Offline mode หรือ โหลดข้อมูลไม่สำเร็จ"); }
+        }
 
-                document.getElementById('splash').style.opacity = '0';
-                setTimeout(() => document.getElementById('splash').remove(), 500);
-            } catch (err) {
-                alert("กรุณาเชื่อมต่ออินเทอร์เน็ตและตรวจสอบ GAS URL");
+        // 2. ระบบสลับโหมด
+        function toggleMode() {
+            isAdminMode = !isAdminMode;
+            document.getElementById('user-panel').style.display = isAdminMode ? 'none' : 'flex';
+            document.getElementById('admin-panel').style.display = isAdminMode ? 'flex' : 'none';
+            document.getElementById('ar-world-container').innerHTML = ''; // ล้างฉาก
+            if(isAdminMode) {
+                recordingNodes = []; // เริ่มบันทึกใหม่
+                document.getElementById('record-status').innerText = "กดปุ่ม 'วางจุด' เมื่อถึงทางเลี้ยว";
             }
         }
 
+        // 3. ระบบผู้ใช้งาน: วาดเส้นทางที่โหลดมา
         document.getElementById('dest-dropdown').onchange = function() {
-            if(!this.value) return;
-            const target = JSON.parse(this.value);
-            document.getElementById('target-name').innerText = target.name;
-            updateARScene(target);
+            const selectedPath = pathsData.find(p => p.id === this.value);
+            if(selectedPath) {
+                document.getElementById('target-name').innerText = "กำลังไป: " + selectedPath.name;
+                draw3DPath(selectedPath.nodes, selectedPath.name);
+            }
         };
 
-        function updateARScene(target) {
+        function draw3DPath(nodes, targetName) {
             const world = document.getElementById('ar-world-container');
             world.innerHTML = ''; 
+            if(nodes.length === 0) return;
 
-            // คำนวณพิกัด (1% = 1 เมตร)
-            const dx = target.x - userPos.x;
-            const dz = userPos.y - target.y;
+            // สร้างเส้นทางต่อกันทีละท่อน (เหมือนท่อ/โถงทางเดิน)
+            for(let i = 0; i < nodes.length - 1; i++) {
+                const line = document.createElement('a-entity');
+                line.setAttribute('line', `start: ${nodes[i].x} -1 ${nodes[i].z}; end: ${nodes[i+1].x} -1 ${nodes[i+1].z}; color: #1a73e8; opacity: 0.8`);
+                world.appendChild(line);
+                
+                // วางลูกศรเรืองแสงตามพื้นทางเดิน
+                const arrow = document.createElement('a-triangle');
+                arrow.setAttribute('color', '#8ab4f8');
+                arrow.setAttribute('position', `${nodes[i].x} -0.9 ${nodes[i].z}`);
+                arrow.setAttribute('rotation', `-90 0 0`);
+                arrow.setAttribute('scale', '0.2 0.2 0.2');
+                world.appendChild(arrow);
+            }
 
-            // --- วาดเส้นทาง (Line Path) ---
-            const path = document.createElement('a-entity');
-            path.setAttribute('line', {
-                start: '0 -0.5 0',
-                end: `${dx} -0.5 ${dz}`,
-                color: '#1a73e8',
-                opacity: 0.9
-            });
-            world.appendChild(path);
-
-            // --- วาดหมุดหมาย 3D (Marker) ---
+            // วาดหมุดเป้าหมายปลายทาง (สวยงามและดูง่ายขึ้น)
+            const endNode = nodes[nodes.length - 1];
             const marker = document.createElement('a-entity');
-            marker.setAttribute('position', `${dx} 0 ${dz}`);
+            marker.setAttribute('position', `${endNode.x} 0 ${endNode.z}`);
 
-            // ลูกศรชี้ลงสไตล์ Google
-            const pin = document.createElement('a-cylinder');
-            pin.setAttribute('radius', '0.1');
-            pin.setAttribute('height', '1.5');
-            pin.setAttribute('color', '#ea4335');
-            pin.setAttribute('position', '0 0.75 0');
+            const pin = document.createElement('a-cone');
+            pin.setAttribute('color', '#ea4335'); pin.setAttribute('height', '0.8');
+            pin.setAttribute('radius-bottom', '0.3'); pin.setAttribute('radius-top', '0');
+            pin.setAttribute('rotation', '180 0 0'); pin.setAttribute('position', '0 0.5 0');
             marker.appendChild(pin);
 
-            const ball = document.createElement('a-sphere');
-            ball.setAttribute('radius', '0.3');
-            ball.setAttribute('color', '#ea4335');
-            ball.setAttribute('position', '0 1.5 0');
-            marker.appendChild(ball);
-
-            // ป้ายชื่อ
             const label = document.createElement('a-text');
-            label.setAttribute('value', target.name);
-            label.setAttribute('align', 'center');
-            label.setAttribute('position', '0 2.2 0');
-            label.setAttribute('scale', '2 2 2');
-            label.setAttribute('color', '#333');
-            label.setAttribute('geometry', 'primitive: plane; width: 1.5; height: 0.5');
-            label.setAttribute('material', 'color: white; opacity: 0.8');
+            label.setAttribute('value', targetName); label.setAttribute('align', 'center');
+            label.setAttribute('position', '0 1.2 0'); label.setAttribute('scale', '2 2 2');
+            label.setAttribute('color', '#ffffff');
+            // ทำกรอบหลังข้อความให้ชัดเจน
+            label.setAttribute('geometry', 'primitive: plane; width: auto; height: 0.4');
+            label.setAttribute('material', 'color: #333; opacity: 0.8; shader: flat');
             marker.appendChild(label);
 
             world.appendChild(marker);
-
-            const dist = Math.sqrt(dx*dx + dz*dz).toFixed(1);
-            document.getElementById('dist-info').innerText = `ระยะทางประมาณ ${dist} เมตร`;
         }
 
-        function confirmArrival() {
-            const dropdown = document.getElementById('dest-dropdown');
-            if(!dropdown.value) return;
-            const target = JSON.parse(dropdown.value);
-            alert("ยินดีด้วย! คุณถึง " + target.name + " แล้ว");
-            userPos = { x: target.x, y: target.y };
-            document.getElementById('ar-world-container').innerHTML = '';
-            document.getElementById('target-name').innerText = "รอกำหนดจุดหมาย";
-            dropdown.value = "";
+        // 4. ระบบแอดมิน: การบันทึกจุด (Manual Node Dropping)
+        // **วิธีนี้แม่นยำที่สุดในโลกเว็บ AR: ให้แอดมินเดินไปถึงจุดเลี้ยว แล้วกดวางจุด**
+        function addNode() {
+            // คำนวณพิกัดจำลองจากการหันกล้อง (อิงจากก้าวเดินคร่าวๆ)
+            // ในทางปฏิบัติ เราจะจำลองระยะห่างจุดละ 2 เมตรตามทิศที่กำลังหัน
+            let distance = recordingNodes.length === 0 ? 0 : 2; 
+            let rad = currentCompass * (Math.PI / 180);
+            
+            myPos.x += Math.sin(rad) * distance;
+            myPos.z -= Math.cos(rad) * distance; // AR Z แกนลบคือเดินไปข้างหน้า
+
+            recordingNodes.push({ x: myPos.x.toFixed(2), z: myPos.z.toFixed(2) });
+            
+            document.getElementById('record-status').innerText = `บันทึกแล้ว: ${recordingNodes.length} จุด`;
+            
+            // วาดจุดให้แอดมินเห็นว่าวางไปแล้วตรงไหน
+            const dot = document.createElement('a-sphere');
+            dot.setAttribute('position', `${myPos.x} -1 ${myPos.z}`);
+            dot.setAttribute('radius', '0.1'); dot.setAttribute('color', '#34a853');
+            document.getElementById('ar-world-container').appendChild(dot);
+        }
+
+        // 5. ระบบแอดมิน: ส่งข้อมูลกลับไปบันทึก
+        function saveRoute() {
+            const roomName = document.getElementById('new-room-name').value;
+            if(!roomName || recordingNodes.length < 2) {
+                alert("กรุณาใส่ชื่อห้องและวางจุดอย่างน้อย 2 จุด (จุดเริ่มและจุดจบ)");
+                return;
+            }
+
+            const payload = { roomName: roomName, floor: "1", nodes: recordingNodes };
+
+            document.getElementById('record-status').innerText = "กำลังบันทึก...";
+            
+            // ส่งข้อมูลแบบ POST
+            fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' } // ป้องกัน CORS
+            }).then(res => res.json()).then(data => {
+                alert("บันทึกเส้นทางสำเร็จ! ID: " + data.id);
+                document.getElementById('new-room-name').value = '';
+                toggleMode(); // กลับไปหน้าปกติ
+                loadRoutes(); // โหลดข้อมูลใหม่เข้า Dropdown ทันที
+            }).catch(err => alert("เกิดข้อผิดพลาด: " + err));
         }
     </script>
 </body>
