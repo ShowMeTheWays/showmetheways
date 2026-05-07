@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hospital AR Navigation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* กล้องพื้นหลัง */
+        #videoElement { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
+
+        /* UI Layer */
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; pointer-events: none; }
+        
+        .header { background: rgba(255, 255, 255, 0.9); padding: 20px; text-align: center; pointer-events: auto; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        
+        /* ลูกศรนำทาง */
+        .ar-viewport { flex-grow: 1; display: flex; align-items: center; justify-content: center; }
+        #arrow { font-size: 120px; color: #00ff00; text-shadow: 0 0 20px rgba(0,0,0,0.5); transition: transform 0.1s linear; }
+
+        .footer { background: white; padding: 25px; pointer-events: auto; border-top-left-radius: 25px; border-top-right-radius: 25px; }
+        
+        select, button { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; margin-top: 10px; }
+        button { background: #005088; color: white; font-weight: bold; border: none; }
+        
+        /* จอป้องกันการเข้าถึงครั้งแรก */
+        #permissionScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
+    </style>
+</head>
+<body>
+
+    <div id="permissionScreen">
+        <i class="fa-solid fa-hospital-user" style="font-size: 80px; color: #005088; margin-bottom: 20px;"></i>
+        <h2>ระบบนำทางในอาคาร</h2>
+        <p>เพื่อการนำทางที่แม่นยำ ระบบจำเป็นต้องเข้าถึง "กล้อง" และ "เซนเซอร์ทิศทาง"</p>
+        <button onclick="startApp()" style="padding: 20px;">ตกลง และเริ่มใช้งาน</button>
+    </div>
+
+    <video id="videoElement" autoplay playsinline></video>
+
+    <div class="overlay">
+        <div class="header">
+            <div id="targetName" style="font-weight: bold; color: #005088;">กรุณาเลือกจุดหมาย</div>
+            <div id="distanceInfo" style="font-size: 14px; color: #666;">ระยะทาง: --</div>
+        </div>
+
+        <div class="ar-viewport">
+            <i id="arrow" class="fa-solid fa-arrow-up"></i>
+        </div>
+
+        <div class="footer">
+            <select id="roomSelect">
+                <option value="">-- คุณต้องการไปที่ไหน? --</option>
+            </select>
+            <button onclick="arrived()">ฉันถึงที่หมายแล้ว</button>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyynZL5soXAOoMAyiTitq09xmm5k22aL5Ij2NUsXGPLsAZNgtW-wjBQYieOVxxLxho8FQ/exec"; 
+        let myPos = { x: 50, y: 90 }; // พิกัดสมมติเริ่มต้น
+        let targetPos = null;
+        let currentHeading = 0;
+
+        async function startApp() {
+            try {
+                // 1. ขอใช้กล้อง (GitHub Pages จะอนุญาตได้ง่ายกว่า)
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                document.getElementById('videoElement').srcObject = stream;
+
+                // 2. ขอสิทธิ์เซนเซอร์ทิศทาง (Compass)
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const res = await DeviceOrientationEvent.requestPermission();
+                    if (res === 'granted') window.addEventListener('deviceorientation', updateCompass);
+                } else {
+                    window.addEventListener('deviceorientation', updateCompass);
+                }
+
+                // 3. โหลดข้อมูลจาก Sheets
+                const response = await fetch(GAS_URL);
+                const locations = await response.json();
+                
+                const select = document.getElementById('roomSelect');
+                locations.forEach(loc => {
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify(loc);
+                    opt.text = `${loc.name} (ชั้น ${loc.floor})`;
+                    select.appendChild(opt);
+                });
+
+                document.getElementById('permissionScreen').style.display = 'none';
+            } catch (err) {
+                alert("เกิดข้อผิดพลาด: " + err.message);
+            }
+        }
+
+        function updateCompass(e) {
+            // ดึงค่าทิศทาง (0 = เหนือ)
+            currentHeading = e.webkitCompassHeading || (360 - e.alpha);
+            renderAR();
+        }
+
+        document.getElementById('roomSelect').onchange = function() {
+            if(this.value) {
+                targetPos = JSON.parse(this.value);
+                document.getElementById('targetName').innerText = "เป้าหมาย: " + targetPos.name;
+            }
+        };
+
+        function renderAR() {
+            if (!targetPos) return;
+
+            // คำนวณองศาจากเราไปหาเป้าหมาย
+            const dx = targetPos.x - myPos.x;
+            const dy = myPos.y - targetPos.y; // จอกับพิกัดจริงมักสวนทางกัน
+            const angleToTarget = Math.atan2(dx, dy) * (180 / Math.PI);
+
+            // หมุนลูกศร (มุมเป้าหมาย - ทิศที่มือถือหันอยู่)
+            const arrowRotation = angleToTarget - currentHeading;
+            document.getElementById('arrow').style.transform = `rotate(${arrowRotation}deg)`;
+
+            const dist = Math.sqrt(dx*dx + dy*dy).toFixed(1);
+            document.getElementById('distanceInfo').innerText = `ระยะทางโดยประมาณ: ${dist} หน่วย`;
+        }
+
+        function arrived() {
+            if(!targetPos) return;
+            alert(`มาถึง ${targetPos.name} แล้ว!`);
+            myPos = { x: targetPos.x, y: targetPos.y }; // เซ็ตตำแหน่งปัจจุบันใหม่
+        }
+    </script>
+</body>
+</html>
