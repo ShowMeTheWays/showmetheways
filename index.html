@@ -2,198 +2,150 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Hospital AR Navigator</title>
-    <!-- โหลด A-Frame สำหรับทำ WebAR -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital AR Navigation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลด A-Frame และ AR.js สำหรับ Location Based AR -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/master/three.js/build/ar-threex-location-only.js'></script>
+    <script type='text/javascript' src='https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js'></script>
     <style>
-        body { margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; overflow: hidden; }
-        #ui-container {
-            position: absolute; top: 10px; left: 10px; right: 10px;
-            z-index: 1000; background: rgba(255, 255, 255, 0.9);
-            padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        button, select, input {
-            width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 5px;
-            border-radius: 5px; border: 1px solid #ccc; font-size: 16px;
-        }
-        .btn-record { background-color: #ff4757; color: white; border: none; font-weight: bold; }
-        .btn-save { background-color: #2ed573; color: white; border: none; font-weight: bold; }
-        .btn-load { background-color: #1e90ff; color: white; border: none; font-weight: bold; }
-        #status { font-size: 14px; color: #555; text-align: center; margin-top: 10px; }
+        body { font-family: 'Kanit', sans-serif; margin: 0; overflow: hidden; }
+        .ui-layer { position: absolute; z-index: 1000; width: 100%; height: 100%; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+        #ar-scene { display: none; } /* ซ่อน AR ไว้ก่อนจนกว่าจะกดนำทาง */
     </style>
 </head>
-<body>
+<body class="bg-slate-50">
 
     <!-- UI Overlay -->
-    <div id="ui-container">
-        <h3 style="margin-top: 0; margin-bottom: 10px; text-align: center;">AR ระบบนำทางโรงพยาบาล</h3>
+    <div id="ui-container" class="ui-layer flex flex-col h-full justify-between p-6">
         
-        <div id="record-section">
-            <input type="text" id="route-name" placeholder="ชื่อเส้นทาง (เช่น ไปแผนกฉุกเฉิน)">
-            <button class="btn-record" id="btn-record" onclick="toggleRecord()">🔴 เริ่มบันทึกเส้นทาง</button>
-            <button class="btn-save" id="btn-save" onclick="saveRoute()" style="display:none;">💾 บันทึกและส่งขึ้นระบบ</button>
+        <!-- Header -->
+        <div class="interactive bg-white/90 backdrop-blur shadow-lg rounded-2xl p-4 text-center">
+            <h1 class="text-2xl font-bold text-blue-600">ระบบนำทางอัจฉริยะ</h1>
+            <p class="text-sm text-gray-500" id="status-text">กรุณาเลือกปลายทาง หรือ บันทึกเส้นทาง</p>
         </div>
 
-        <hr>
-
-        <div id="load-section">
-            <button class="btn-load" onclick="fetchRoutes()">🔄 โหลดเส้นทางที่มี</button>
-            <select id="route-select" style="display:none;" onchange="drawSelectedRoute()">
-                <option value="">-- เลือกเส้นทาง --</option>
-            </select>
+        <!-- กล่องข้อมูลตรงกลาง (ซ่อนตอนเปิดกล้อง) -->
+        <div id="main-menu" class="interactive bg-white p-6 rounded-3xl shadow-xl mt-4">
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold mb-2">จุดหมายปลายทางของคุณ</label>
+                <select id="destination-select" class="w-full p-3 border rounded-xl bg-gray-50">
+                    <option value="opd">แผนกผู้ป่วยนอก (OPD)</option>
+                    <option value="pharmacy">ห้องรับยา</option>
+                    <option value="xray">แผนกเอ็กซเรย์</option>
+                </select>
+            </div>
+            <button onclick="startNavigation()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition">
+                🚀 เริ่มนำทาง (เปิดกล้อง)
+            </button>
+            <hr class="my-6">
+            <button onclick="recordLocation()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition">
+                📍 โหมดผู้ดูแล: บันทึกจุดปัจจุบัน
+            </button>
         </div>
 
-        <div id="status">สถานะ: รอคำสั่ง... <br><small>*กรุณายืนจุดเริ่มต้นให้ตรงกันเสมอ</small></div>
+        <!-- Footer / Navigation UI (แสดงตอนเปิดกล้อง) -->
+        <div id="nav-ui" class="hidden interactive bg-white/90 backdrop-blur shadow-lg rounded-2xl p-4 text-center mb-4">
+            <p class="text-lg font-bold text-gray-800">เดินตามลูกศรบนหน้าจอ</p>
+            <button onclick="stopNavigation()" class="mt-2 bg-red-500 text-white px-6 py-2 rounded-lg font-semibold">สิ้นสุดการนำทาง</button>
+        </div>
     </div>
 
-    <!-- AR Scene -->
-    <a-scene webxr="optionalFeatures: hit-test;" renderer="antialias: true; colorManagement: true;">
-        <!-- กล้องและตัวจับพิกัด -->
-        <a-camera id="user-camera" position="0 1.6 0"></a-camera>
+    <!-- AR Scene (A-Frame + AR.js) -->
+    <a-scene id="ar-scene" vr-mode-ui="enabled: false" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;">
+        <!-- ตำแหน่งกล้องจำลอง (จะดึงพิกัด GPS ของมือถือ) -->
+        <a-camera gps-camera rotation-reader></a-camera>
         
-        <!-- Container สำหรับใส่จุดนำทาง (Breadcrumbs) -->
-        <a-entity id="path-container"></a-entity>
+        <!-- โมเดลลูกศรที่จะถูกเพิ่มผ่าน JS ตามพิกัดปลายทาง -->
+        <a-entity id="destination-marker"></a-entity>
     </a-scene>
 
     <script>
-        // === ตั้งค่า Google Apps Script Web App URL ที่นี่ ===
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzx3T1m5Rm5PrFQD3rAsycBsuERP_ZUauV4DiXbZJZ-zTnq6bVuEVz1z5ott-hmbrzbuQ/exec';
+        // ใส่ URL Web App จาก Google Apps Script ของคุณที่นี่
+        const APPSCRIPT_URL = "https://script.google.com/macros/s/AKfycbysouyjSQOeBcRPrE1L5YsgPyhy6kt9mzCNjwWEv4ha_rr8jDXtzPZXsN_zDUOthJ09Ig/exec";
 
-        let isRecording = false;
-        let recordedPath = [];
-        let recordInterval;
-        let allRoutes = [];
+        const mainMenu = document.getElementById('main-menu');
+        const navUI = document.getElementById('nav-ui');
+        const arScene = document.getElementById('ar-scene');
+        const statusText = document.getElementById('status-text');
 
-        const camera = document.getElementById('user-camera');
-        const statusDiv = document.getElementById('status');
-        const pathContainer = document.getElementById('path-container');
+        // ฟังก์ชันเริ่มนำทาง
+        function startNavigation() {
+            mainMenu.classList.add('hidden');
+            navUI.classList.remove('hidden');
+            arScene.style.display = 'block';
+            statusText.innerText = "กำลังค้นหาสัญญาณและพิกัด...";
 
-        // 1. ฟังก์ชันเปิด/ปิดการบันทึก
-        function toggleRecord() {
-            if (!isRecording) {
-                // เริ่มบันทึก
-                isRecording = true;
-                recordedPath = [];
-                document.getElementById('btn-record').innerText = "⏹️ หยุดบันทึก";
-                document.getElementById('btn-record').style.backgroundColor = "#ffa502";
-                document.getElementById('btn-save').style.display = "none";
-                statusDiv.innerText = "สถานะ: กำลังบันทึกพิกัด...";
+            // สมมติพิกัดปลายทาง (ในการใช้งานจริง ต้องดึงมาจาก Google Sheets)
+            // ในที่นี้คือสมมติพิกัดให้เป็นจุดใกล้เคียงกับผู้ใช้
+            navigator.geolocation.getCurrentPosition((position) => {
+                const targetLat = position.coords.latitude + 0.0001; // ขยับไปนิดหน่อยเพื่อจำลองปลายทาง
+                const targetLng = position.coords.longitude + 0.0001;
                 
-                // เคลียร์เส้นทางเก่า
-                pathContainer.innerHTML = '';
-
-                // บันทึกพิกัดทุกๆ 1 วินาที
-                recordInterval = setInterval(() => {
-                    const pos = camera.getAttribute('position');
-                    // บันทึกเฉพาะเมื่อมีการเดินขยับไปจากจุดเดิมเล็กน้อย (ป้องกันพิกัดซ้ำเยอะเกิน)
-                    if(recordedPath.length === 0 || calculateDistance(recordedPath[recordedPath.length-1], pos) > 0.5) {
-                        recordedPath.push({x: pos.x, y: pos.y, z: pos.z});
-                        drawBreadcrumb(pos.x, pos.y, pos.z, "#ff4757"); // สีแดงตอนกำลังอัด
-                    }
-                }, 1000);
-            } else {
-                // หยุดบันทึก
-                isRecording = false;
-                clearInterval(recordInterval);
-                document.getElementById('btn-record').innerText = "🔴 เริ่มบันทึกเส้นทางใหม่";
-                document.getElementById('btn-record').style.backgroundColor = "#ff4757";
-                document.getElementById('btn-save').style.display = "block";
-                statusDiv.innerText = `สถานะ: บันทึกเสร็จสิ้น (${recordedPath.length} จุด)`;
-            }
+                statusText.innerText = `นำทางไปยังพิกัดเป้าหมาย`;
+                createARMarker(targetLat, targetLng);
+            }, (error) => {
+                alert("ต้องอนุญาตให้เข้าถึงตำแหน่ง (Location) เพื่อใช้งานนำทาง");
+            }, { enableHighAccuracy: true });
         }
 
-        // 2. ฟังก์ชันส่งข้อมูลขึ้น Google Sheet
-        async function saveRoute() {
-            const routeName = document.getElementById('route-name').value || "เส้นทางไม่ระบุชื่อ";
-            if (recordedPath.length === 0) {
-                alert("ยังไม่มีข้อมูลเส้นทาง กรุณาเดินบันทึกก่อนครับ");
-                return;
-            }
-
-            statusDiv.innerText = "สถานะ: กำลังส่งข้อมูล...";
-            try {
-                const response = await fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        routeName: routeName,
-                        pathData: recordedPath
-                    })
-                });
-                const result = await response.json();
-                if(result.status === 'success') {
-                    statusDiv.innerText = "สถานะ: บันทึกขึ้นระบบสำเร็จ!";
-                    document.getElementById('btn-save').style.display = "none";
-                }
-            } catch (error) {
-                statusDiv.innerText = "สถานะ: เกิดข้อผิดพลาดในการบันทึก";
-                console.error(error);
-            }
+        // สร้างจุดหมาย 3D บนหน้าจอ AR
+        function createARMarker(lat, lng) {
+            const marker = document.getElementById('destination-marker');
+            marker.innerHTML = ''; // เคลียร์ของเก่า
+            
+            // สร้างกล่อง/ลูกศร 3 มิติ ชี้เป้าหมาย
+            const box = document.createElement('a-box');
+            box.setAttribute('color', 'red');
+            box.setAttribute('scale', '2 2 2');
+            box.setAttribute('gps-entity-place', `latitude: ${lat}; longitude: ${lng};`);
+            marker.appendChild(box);
         }
 
-        // 3. ฟังก์ชันดึงข้อมูลเส้นทางทั้งหมด
-        async function fetchRoutes() {
-            statusDiv.innerText = "สถานะ: กำลังโหลดเส้นทาง...";
-            try {
-                const response = await fetch(APPS_SCRIPT_URL);
-                const result = await response.json();
+        // ฟังก์ชันสิ้นสุดนำทาง
+        function stopNavigation() {
+            mainMenu.classList.remove('hidden');
+            navUI.classList.add('hidden');
+            arScene.style.display = 'none';
+            statusText.innerText = "กรุณาเลือกปลายทาง หรือ บันทึกเส้นทาง";
+        }
+
+        // ฟังก์ชันบันทึกพิกัด (Record Mode)
+        function recordLocation() {
+            statusText.innerText = "กำลังดึงพิกัด GPS...";
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const nodeName = prompt("ตั้งชื่อจุดนี้ (เช่น หน้าลิฟต์ชั้น 1):");
                 
-                if (result.status === 'success') {
-                    allRoutes = result.routes;
-                    const select = document.getElementById('route-select');
-                    select.innerHTML = '<option value="">-- เลือกเส้นทางเพื่อนำทาง --</option>';
+                if(nodeName) {
+                    statusText.innerText = "กำลังบันทึกลงฐานข้อมูล...";
                     
-                    allRoutes.forEach((route, index) => {
-                        select.innerHTML += `<option value="${index}">${route.name}</option>`;
-                    });
-                    
-                    select.style.display = "block";
-                    statusDiv.innerText = "สถานะ: โหลดสำเร็จ กรุณาเลือกเส้นทาง";
+                    // ส่งข้อมูลไปบันทึกที่ Google Sheets
+                    fetch(APPSCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            id: 'node_' + Date.now(),
+                            name: nodeName,
+                            lat: lat,
+                            lng: lng
+                        })
+                    }).then(res => res.json())
+                      .then(data => {
+                          alert(`บันทึก ${nodeName} สำเร็จ!`);
+                          statusText.innerText = "บันทึกเรียบร้อยแล้ว";
+                      }).catch(err => {
+                          alert("เกิดข้อผิดพลาดในการบันทึก");
+                          statusText.innerText = "ระบบพร้อมใช้งาน";
+                      });
+                } else {
+                    statusText.innerText = "ระบบพร้อมใช้งาน";
                 }
-            } catch (error) {
-                statusDiv.innerText = "สถานะ: โหลดข้อมูลล้มเหลว";
-                console.error(error);
-            }
-        }
-
-        // 4. ฟังก์ชันวาดเส้นทางที่เลือก (จุดนำทางเรืองแสง)
-        function drawSelectedRoute() {
-            const select = document.getElementById('route-select');
-            const routeIndex = select.value;
-            if(routeIndex === "") return;
-
-            const selectedRoute = allRoutes[routeIndex];
-            pathContainer.innerHTML = ''; // ล้างของเก่า
-            
-            selectedRoute.pathData.forEach((pos, i) => {
-                // สร้าง Animation ให้จุดนำทางค่อยๆ ปรากฏและขยับขึ้นลง (Floating Effect)
-                drawBreadcrumb(pos.x, pos.y, pos.z, "#1dd1a1", true); 
-            });
-
-            statusDiv.innerText = `สถานะ: กำลังนำทางไป "${selectedRoute.name}"`;
-        }
-
-        // ฟังก์ชันช่วยเหลือ: วาดจุด (Sphere) เรืองแสง
-        function drawBreadcrumb(x, y, z, color, animate = false) {
-            const sphere = document.createElement('a-sphere');
-            sphere.setAttribute('position', `${x} ${y - 0.5} ${z}`); // ให้อยู่ต่ำลงมาใกล้พื้น
-            sphere.setAttribute('radius', '0.15');
-            // ทำวัสดุเรืองแสง
-            sphere.setAttribute('material', `color: ${color}; shader: flat; transparent: true; opacity: 0.8;`);
-            
-            if(animate) {
-                // ทำให้ลูกแก้วนำทางลอยขึ้นลงเบาๆ และเรืองแสงน่ามอง
-                sphere.setAttribute('animation', `property: position; dir: alternate; dur: 1500; easing: easeInOutSine; loop: true; to: ${x} ${y - 0.3} ${z}`);
-            }
-
-            pathContainer.appendChild(sphere);
-        }
-
-        // ฟังก์ชันช่วยเหลือ: คำนวณระยะห่างระหว่าง 2 จุด (แกน x, z)
-        function calculateDistance(pos1, pos2) {
-            const dx = pos1.x - pos2.x;
-            const dz = pos1.z - pos2.z;
-            return Math.sqrt(dx * dx + dz * dz);
+            }, (error) => {
+                alert("ไม่สามารถดึงพิกัดได้ กรุณาเปิด GPS");
+            }, { enableHighAccuracy: true });
         }
     </script>
 </body>
