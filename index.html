@@ -4,1223 +4,798 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>🏥 AR Hospital Nav</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-
+<title>Hospital AR Nav</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-/* ══════════════════════════════════════════════════════
-   RESET & VARIABLES
-══════════════════════════════════════════════════════ */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --cyan:    #00e5ff;
-  --cyan2:   #00b8d4;
-  --navy:    #060c1a;
-  --navy2:   #0d1b2e;
-  --navy3:   #122540;
-  --white:   #e8f4ff;
-  --gray:    #5a7a9a;
-  --green:   #00ff88;
-  --orange:  #ffb300;
-  --red:     #ff3d5a;
-  --glass:   rgba(6,20,46,0.78);
-  --border:  rgba(0,229,255,0.18);
-  --shadow:  0 0 30px rgba(0,229,255,0.25);
-  --r:       16px;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans Thai', sans-serif;
+  background: #111;
+  color: #fff;
+  height: 100dvh;
+  overflow: hidden;
 }
-html,body{width:100%;height:100%;overflow:hidden;background:var(--navy);color:var(--white);
-  font-family:'Noto Sans Thai',sans-serif;-webkit-font-smoothing:antialiased}
 
-/* ══════════════════════════════════════════════════════
-   SCREENS
-══════════════════════════════════════════════════════ */
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  transition:opacity .35s,transform .35s;z-index:10}
-.screen.hidden{opacity:0;pointer-events:none;transform:scale(.97)}
+/* ── Screens ──────────────────────────────────────── */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 16px;
+}
+.screen.hidden { display: none; }
 
-/* ══════════════════════════════════════════════════════
-   GRID BACKGROUND
-══════════════════════════════════════════════════════ */
-body::before{content:'';position:fixed;inset:0;
-  background-image:
-    linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);
-  background-size:40px 40px;z-index:0;pointer-events:none}
+/* ── Loading ─────────────────────────────────────── */
+#screen-loading { background: #111; text-align: center; }
+#screen-loading p { color: #888; font-size: 15px; }
 
-/* ══════════════════════════════════════════════════════
-   SPLASH SCREEN
-══════════════════════════════════════════════════════ */
-#splash{background:var(--navy);z-index:100}
-.splash-logo{
-  width:110px;height:110px;border-radius:28px;
-  background:linear-gradient(135deg,var(--navy2),var(--navy3));
-  border:2px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  font-size:52px;margin-bottom:24px;
-  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);
-  animation:pulse-glow 2s ease-in-out infinite}
-@keyframes pulse-glow{
-  0%,100%{box-shadow:0 0 20px rgba(0,229,255,.2),inset 0 1px 0 rgba(255,255,255,.08)}
-  50%{box-shadow:0 0 50px rgba(0,229,255,.5),inset 0 1px 0 rgba(255,255,255,.08)}}
-.splash-title{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;
-  letter-spacing:3px;color:var(--cyan);margin-bottom:6px}
-.splash-sub{font-size:13px;color:var(--gray);letter-spacing:1px;margin-bottom:36px}
-.progress-bar{width:200px;height:3px;background:var(--navy3);border-radius:2px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan2),var(--cyan));
-  border-radius:2px;width:0%;transition:width .1s linear;
-  box-shadow:0 0 8px var(--cyan)}
-.splash-version{position:absolute;bottom:40px;font-size:11px;color:var(--gray);
-  font-family:'Orbitron',sans-serif;letter-spacing:2px}
+/* ── Select ──────────────────────────────────────── */
+#screen-select {
+  background: #111;
+  justify-content: flex-start;
+  padding-top: 48px;
+  overflow-y: auto;
+  align-items: stretch;
+}
+#screen-select h1 { font-size: 22px; margin-bottom: 8px; text-align: center; }
 
-/* ══════════════════════════════════════════════════════
-   SELECT SCREEN
-══════════════════════════════════════════════════════ */
-#select-screen{background:var(--navy);padding:20px;align-items:stretch;justify-content:flex-start;padding-top:0}
-.select-header{width:100%;padding:56px 0 24px;text-align:center;flex-shrink:0}
-.select-header h1{font-size:24px;font-weight:700;color:var(--white);margin-bottom:4px}
-.select-header p{font-size:13px;color:var(--gray)}
-.select-scroll{flex:1;overflow-y:auto;width:100%;-webkit-overflow-scrolling:touch}
-.select-scroll::-webkit-scrollbar{display:none}
-.section-label{font-size:11px;font-family:'Orbitron',sans-serif;letter-spacing:2px;
-  color:var(--gray);margin:16px 0 10px;text-transform:uppercase}
-.pkg-card{
-  background:var(--glass);border:1px solid var(--border);border-radius:var(--r);
-  padding:18px 20px;margin-bottom:10px;cursor:pointer;
-  transition:all .2s;backdrop-filter:blur(12px);
-  display:flex;align-items:center;gap:14px}
-.pkg-card:active{transform:scale(.98)}
-.pkg-card.selected{border-color:var(--cyan);box-shadow:var(--shadow)}
-.pkg-icon{font-size:28px;flex-shrink:0}
-.pkg-info h3{font-size:16px;font-weight:600;color:var(--white);margin-bottom:3px}
-.pkg-info p{font-size:12px;color:var(--gray)}
-.pkg-arrow{margin-left:auto;color:var(--cyan);font-size:18px;opacity:.6}
-.sub-list{display:none;padding-left:10px}
-.sub-list.open{display:block}
-.sub-card{
-  background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.1);
-  border-radius:12px;padding:14px 18px;margin-bottom:8px;cursor:pointer;
-  transition:all .2s;display:flex;align-items:center;justify-content:space-between}
-.sub-card:active{transform:scale(.98)}
-.sub-card:hover,.sub-card:active{background:rgba(0,229,255,.12);border-color:var(--cyan)}
-.sub-card span{font-size:14px;color:var(--white)}
-.sub-steps{font-size:11px;color:var(--gray)}
-.btn-demo{
-  width:100%;margin-top:8px;padding:14px;
-  background:linear-gradient(135deg,rgba(0,229,255,.1),rgba(0,229,255,.2));
-  border:1px dashed rgba(0,229,255,.4);border-radius:var(--r);
-  color:var(--cyan);font-size:13px;font-family:'Noto Sans Thai',sans-serif;
-  cursor:pointer;letter-spacing:.5px}
+.pkg-block { margin-bottom: 8px; }
+.pkg-header {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pkg-header:active { background: #2a2a2a; }
+.sub-list { display: none; padding: 6px 0 0 12px; gap: 6px; flex-direction: column; }
+.sub-list.open { display: flex; }
+.sub-btn {
+  background: #1a2a3a;
+  border: 1px solid #1e4060;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #7ec8ff;
+  text-align: left;
+  font-family: inherit;
+  width: 100%;
+}
+.sub-btn:active { background: #1e3a55; }
 
-/* ══════════════════════════════════════════════════════
-   PERMISSION SCREEN
-══════════════════════════════════════════════════════ */
-#permission-screen{background:var(--navy);padding:32px;text-align:center}
-.perm-icon{font-size:72px;margin-bottom:20px;display:block;
-  animation:float 3s ease-in-out infinite}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.perm-title{font-size:22px;font-weight:700;color:var(--white);margin-bottom:10px}
-.perm-desc{font-size:14px;color:var(--gray);line-height:1.7;margin-bottom:32px}
-.perm-items{display:flex;flex-direction:column;gap:12px;margin-bottom:36px;text-align:left}
-.perm-item{
-  background:var(--glass);border:1px solid var(--border);border-radius:12px;
-  padding:14px 16px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(8px)}
-.perm-item-icon{font-size:24px;flex-shrink:0}
-.perm-item-text h4{font-size:14px;font-weight:600;color:var(--white);margin-bottom:2px}
-.perm-item-text p{font-size:12px;color:var(--gray)}
-.perm-item-status{margin-left:auto;font-size:18px;transition:.3s}
+/* ── Permission ──────────────────────────────────── */
+#screen-permission { background: #111; text-align: center; }
+#screen-permission h2 { font-size: 20px; margin-bottom: 8px; }
+#screen-permission p { color: #aaa; font-size: 14px; line-height: 1.6; }
 
-/* ══════════════════════════════════════════════════════
-   RELOC SCREEN
-══════════════════════════════════════════════════════ */
-#reloc-screen{background:var(--navy);text-align:center;padding:32px}
-.reloc-box{
-  width:220px;height:220px;border:2px solid var(--cyan);border-radius:24px;
-  position:relative;display:flex;align-items:center;justify-content:center;
-  margin:0 auto 28px;
-  box-shadow:0 0 30px rgba(0,229,255,.3),inset 0 0 30px rgba(0,229,255,.05)}
-.reloc-corner{position:absolute;width:24px;height:24px;border-color:var(--cyan);border-style:solid}
-.reloc-corner.tl{top:-2px;left:-2px;border-width:4px 0 0 4px;border-radius:6px 0 0 0}
-.reloc-corner.tr{top:-2px;right:-2px;border-width:4px 4px 0 0;border-radius:0 6px 0 0}
-.reloc-corner.bl{bottom:-2px;left:-2px;border-width:0 0 4px 4px;border-radius:0 0 0 6px}
-.reloc-corner.br{bottom:-2px;right:-2px;border-width:0 4px 4px 0;border-radius:0 0 6px 0}
-.reloc-scan{position:absolute;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
-  animation:scan 2s ease-in-out infinite;box-shadow:0 0 8px var(--cyan)}
-@keyframes scan{0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
-.reloc-qr{font-size:72px;position:relative;z-index:1}
-.reloc-title{font-size:20px;font-weight:700;color:var(--white);margin-bottom:8px}
-.reloc-desc{font-size:13px;color:var(--gray);line-height:1.7;margin-bottom:28px}
-.reloc-status{
-  display:flex;align-items:center;gap:10px;font-size:13px;
-  background:var(--glass);border:1px solid var(--border);
-  border-radius:50px;padding:10px 20px;margin-bottom:24px;
-  backdrop-filter:blur(8px)}
-.reloc-dot{width:8px;height:8px;border-radius:50%;background:var(--orange);
-  animation:blink 1s ease-in-out infinite;flex-shrink:0}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+/* ── Reloc ───────────────────────────────────────── */
+#screen-reloc { background: #111; text-align: center; }
+#screen-reloc h2 { font-size: 20px; margin-bottom: 8px; }
+#screen-reloc p { color: #aaa; font-size: 14px; line-height: 1.6; }
 
-/* ══════════════════════════════════════════════════════
-   BUTTONS
-══════════════════════════════════════════════════════ */
-.btn{
-  padding:15px 32px;border-radius:50px;border:none;cursor:pointer;
-  font-family:'Noto Sans Thai',sans-serif;font-size:15px;font-weight:600;
-  transition:all .2s;letter-spacing:.5px;width:100%;max-width:320px}
-.btn-primary{
-  background:linear-gradient(135deg,var(--cyan2),var(--cyan));
-  color:var(--navy);box-shadow:0 4px 20px rgba(0,229,255,.4)}
-.btn-primary:active{transform:scale(.97);box-shadow:none}
-.btn-secondary{
-  background:var(--glass);color:var(--white);
-  border:1px solid var(--border);backdrop-filter:blur(8px)}
-.btn-ghost{background:transparent;color:var(--gray);font-size:13px;margin-top:10px}
+/* ── Navigation ──────────────────────────────────── */
+#screen-nav { background: #000; padding: 0; justify-content: flex-start; }
 
-/* ══════════════════════════════════════════════════════
-   NAV SCREEN — CAMERA + OVERLAY
-══════════════════════════════════════════════════════ */
-#nav-screen{background:#000;padding:0;justify-content:flex-start}
-#camera-feed{
-  position:fixed;inset:0;width:100%;height:100%;
-  object-fit:cover;z-index:0}
-.nav-overlay{position:fixed;inset:0;z-index:5;display:flex;
-  flex-direction:column;justify-content:space-between;pointer-events:none}
+#camera-feed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
 
-/* ── HUD Top ──────────────────────────────────────────── */
-.hud-top{
-  padding:52px 16px 16px;display:flex;
-  align-items:center;justify-content:space-between}
-.step-badge{
-  background:var(--glass);backdrop-filter:blur(12px);
-  border:1px solid var(--border);border-radius:50px;
-  padding:8px 16px;font-size:12px;font-family:'Orbitron',sans-serif;
-  color:var(--cyan);letter-spacing:1px}
-.sensor-pill{
-  background:var(--glass);backdrop-filter:blur(12px);
-  border:1px solid var(--border);border-radius:50px;
-  padding:8px 12px;font-size:11px;color:var(--white);
-  display:flex;align-items:center;gap:6px}
-.sensor-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
-  animation:blink 1.5s ease-in-out infinite}
+.nav-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
 
-/* ── Arrow Zone ───────────────────────────────────────── */
-.arrow-zone{
-  flex:1;display:flex;align-items:center;justify-content:center;
-  position:relative}
-.arrow-wrap{
-  position:relative;display:flex;align-items:center;
-  justify-content:center;width:200px;height:200px}
-.arrow-ring{
-  position:absolute;inset:0;border-radius:50%;
-  border:2px solid rgba(0,229,255,.25);
-  animation:ring-pulse 2.5s ease-in-out infinite}
-.arrow-ring-2{
-  position:absolute;inset:20px;border-radius:50%;
-  border:1px solid rgba(0,229,255,.12);
-  animation:ring-pulse 2.5s ease-in-out infinite .5s}
-@keyframes ring-pulse{
-  0%,100%{transform:scale(1);opacity:.6}
-  50%{transform:scale(1.06);opacity:1}}
-.arrow-svg{
-  width:120px;height:120px;
-  filter:drop-shadow(0 0 12px rgba(0,229,255,.9)) drop-shadow(0 0 30px rgba(0,229,255,.4));
-  transition:transform .4s cubic-bezier(.4,0,.2,1);
-  transform-origin:center}
-.dist-badge{
-  position:absolute;bottom:-36px;left:50%;transform:translateX(-50%);
-  background:var(--glass);backdrop-filter:blur(12px);
-  border:1px solid var(--border);border-radius:50px;
-  padding:6px 16px;white-space:nowrap;
-  font-family:'Orbitron',sans-serif;font-size:13px;color:var(--cyan)}
-.arrived-badge{
-  position:absolute;bottom:-36px;left:50%;transform:translateX(-50%);
-  background:rgba(0,255,136,.15);backdrop-filter:blur(12px);
-  border:1px solid rgba(0,255,136,.4);border-radius:50px;
-  padding:6px 16px;white-space:nowrap;
-  font-size:13px;color:var(--green);display:none}
+/* Top bar */
+.nav-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 52px 16px 16px;
+}
+.badge {
+  background: rgba(0,0,0,0.65);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  backdrop-filter: blur(6px);
+}
+#sensor-status { color: #4dff91; }
+#sensor-status.warn { color: #ffb74d; }
+#sensor-status.off  { color: #888; }
 
-/* ── Info Card ────────────────────────────────────────── */
-.info-card{
-  background:var(--glass);backdrop-filter:blur(20px);
-  border-top:1px solid var(--border);
-  border-radius:24px 24px 0 0;
-  padding:20px 20px calc(20px + env(safe-area-inset-bottom));
-  pointer-events:auto;
-  box-shadow:0 -8px 40px rgba(0,0,0,.5)}
-.card-progress{
-  display:flex;gap:6px;margin-bottom:16px}
-.prog-dot{
-  flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.1);
-  transition:background .4s}
-.prog-dot.active{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
-.prog-dot.done{background:var(--cyan2)}
-.card-location{
-  font-size:11px;font-family:'Orbitron',sans-serif;
-  letter-spacing:2px;color:var(--cyan);margin-bottom:6px;
-  text-transform:uppercase}
-.card-instruction{
-  font-size:16px;font-weight:600;color:var(--white);
-  line-height:1.6;margin-bottom:14px}
-.card-image-wrap{
-  position:relative;border-radius:12px;overflow:hidden;
-  margin-bottom:16px;height:100px;background:var(--navy3)}
-.card-image-wrap img{
-  width:100%;height:100%;object-fit:cover;display:block}
-.card-image-label{
-  position:absolute;top:8px;left:8px;
-  background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
-  border-radius:6px;padding:3px 10px;font-size:10px;color:var(--gray);
-  letter-spacing:1px}
-.card-actions{display:flex;gap:10px}
-.btn-card-next{
-  flex:1;padding:13px;border-radius:12px;border:none;cursor:pointer;
-  background:linear-gradient(135deg,var(--cyan2),var(--cyan));
-  color:var(--navy);font-family:'Noto Sans Thai',sans-serif;
-  font-size:14px;font-weight:700;
-  box-shadow:0 4px 16px rgba(0,229,255,.3);pointer-events:auto}
-.btn-card-next:active{transform:scale(.97)}
-.btn-card-next:disabled{opacity:.4;cursor:not-allowed}
-.btn-card-recal{
-  padding:13px 16px;border-radius:12px;border:1px solid var(--border);
-  background:var(--glass);color:var(--white);font-size:18px;cursor:pointer;
-  pointer-events:auto}
+/* Arrow area */
+.nav-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+}
 
-/* Proximity alert */
-.prox-alert{
-  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  background:rgba(0,255,136,.15);backdrop-filter:blur(20px);
-  border:2px solid var(--green);border-radius:20px;
-  padding:20px 32px;text-align:center;z-index:50;
-  animation:pop .3s cubic-bezier(.34,1.56,.64,1);display:none}
-@keyframes pop{from{transform:translate(-50%,-50%) scale(.7);opacity:0}
-  to{transform:translate(-50%,-50%) scale(1);opacity:1}}
-.prox-alert h3{font-size:18px;font-weight:700;color:var(--green);margin-bottom:4px}
-.prox-alert p{font-size:13px;color:var(--white)}
+#arrow-wrap {
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
 
-/* ══════════════════════════════════════════════════════
-   ARRIVED SCREEN
-══════════════════════════════════════════════════════ */
-#arrived-screen{background:var(--navy);text-align:center;padding:32px}
-.arrived-anim{font-size:80px;display:block;
-  animation:arrived-bounce 1s cubic-bezier(.34,1.56,.64,1)}
-@keyframes arrived-bounce{
-  0%{transform:scale(0);opacity:0}
-  100%{transform:scale(1);opacity:1}}
-.arrived-ring{
-  width:140px;height:140px;border-radius:50%;
-  border:3px solid var(--green);margin:0 auto 24px;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 0 40px rgba(0,255,136,.4),inset 0 0 40px rgba(0,255,136,.1);
-  animation:glow-green 2s ease-in-out infinite}
-@keyframes glow-green{
-  0%,100%{box-shadow:0 0 30px rgba(0,255,136,.3),inset 0 0 30px rgba(0,255,136,.05)}
-  50%{box-shadow:0 0 60px rgba(0,255,136,.6),inset 0 0 60px rgba(0,255,136,.15)}}
-.arrived-title{font-size:26px;font-weight:700;color:var(--white);margin-bottom:8px}
-.arrived-sub{font-size:14px;color:var(--gray);margin-bottom:8px}
-.arrived-dest{font-size:20px;font-weight:700;color:var(--green);margin-bottom:32px}
+#nav-arrow {
+  width: 120px;
+  height: 120px;
+  transition: transform 0.4s ease;
+  filter: drop-shadow(0 0 16px rgba(0, 200, 255, 0.8));
+}
 
-/* ══════════════════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════════════════ */
-.toast{
-  position:fixed;bottom:140px;left:50%;transform:translateX(-50%);
-  background:var(--glass);backdrop-filter:blur(12px);
-  border:1px solid var(--border);border-radius:50px;
-  padding:10px 20px;font-size:13px;color:var(--white);
-  white-space:nowrap;z-index:999;transition:opacity .3s;
-  box-shadow:0 4px 20px rgba(0,0,0,.4);pointer-events:none}
-.toast.hidden{opacity:0}
+#dist-label {
+  background: rgba(0,0,0,0.65);
+  border: 1px solid rgba(0,200,255,0.3);
+  border-radius: 20px;
+  padding: 6px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #00c8ff;
+  backdrop-filter: blur(6px);
+}
 
-/* ══════════════════════════════════════════════════════
-   DEBUG PANEL (optional)
-══════════════════════════════════════════════════════ */
-#debug-panel{
-  position:fixed;top:0;left:0;padding:4px 8px;
-  background:rgba(0,0,0,.7);font-size:9px;
-  font-family:monospace;color:#00ff88;z-index:999;
-  line-height:1.6;pointer-events:none;display:none}
+/* Bottom card */
+.nav-card {
+  background: rgba(10,10,10,0.85);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.nav-card-loc {
+  font-size: 12px;
+  color: #00c8ff;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.nav-card-instr {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.nav-card-img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  display: block;
+  background: #1a1a1a;
+}
+.nav-card-img.hidden { display: none; }
+
+.nav-card-row {
+  display: flex;
+  gap: 10px;
+}
+.btn-next {
+  flex: 1;
+  padding: 13px;
+  background: #0077cc;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.btn-next:active { background: #005fa3; }
+.btn-recal {
+  padding: 13px 16px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-recal:active { background: rgba(255,255,255,0.15); }
+
+/* Progress dots */
+.progress-dots {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+.dot {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: #333;
+}
+.dot.done { background: #0055aa; }
+.dot.active { background: #00c8ff; }
+
+/* Waypoint label (small) */
+#wp-label {
+  font-size: 11px;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+
+/* ── Arrived ─────────────────────────────────────── */
+#screen-arrived { background: #111; text-align: center; }
+#screen-arrived h2 { font-size: 24px; margin-bottom: 8px; }
+#screen-arrived .dest { font-size: 20px; color: #4dff91; font-weight: 700; margin-bottom: 24px; }
+
+/* ── Shared UI ───────────────────────────────────── */
+.btn {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary { background: #0077cc; color: #fff; }
+.btn-primary:active { background: #005fa3; }
+.btn-secondary {
+  background: transparent;
+  color: #888;
+  border: 1px solid #333;
+  font-size: 13px;
+  padding: 10px;
+}
+.btn-secondary:active { background: #1a1a1a; }
+
+#error-msg {
+  color: #ff6b6b;
+  font-size: 14px;
+  text-align: center;
+  min-height: 20px;
+}
 </style>
 </head>
-
 <body>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN 1: SPLASH
-════════════════════════════════════════════════════ -->
-<div id="splash" class="screen">
-  <div class="splash-logo">🏥</div>
-  <div class="splash-title">HOSPITAL NAV</div>
-  <div class="splash-sub">AR INDOOR NAVIGATION SYSTEM</div>
-  <div class="progress-bar"><div class="progress-fill" id="splash-progress"></div></div>
-  <div class="splash-version">v2.0 — PDR ENABLED</div>
+<!-- ── SCREEN: Loading ──────────────────────────────────── -->
+<div id="screen-loading" class="screen">
+  <p>⏳ กำลังโหลด...</p>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN 2: SELECT PACKAGE
-════════════════════════════════════════════════════ -->
-<div id="select-screen" class="screen hidden">
-  <div class="select-header">
-    <h1>เลือกบริการ</h1>
-    <p>กรุณาเลือกประเภทการตรวจที่ต้องการ</p>
-  </div>
-  <div class="select-scroll" id="package-list">
-    <!-- generated by JS -->
-    <div style="text-align:center;padding:40px;color:var(--gray)">
-      <div style="font-size:32px;margin-bottom:12px">⏳</div>
-      <div style="font-size:14px">กำลังโหลดข้อมูล...</div>
-    </div>
-  </div>
+<!-- ── SCREEN: Select Package ──────────────────────────── -->
+<div id="screen-select" class="screen hidden">
+  <h1>เลือกบริการ</h1>
+  <div id="pkg-list" style="width:100%;max-width:480px"></div>
+  <div id="error-msg"></div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN 3: PERMISSION
-════════════════════════════════════════════════════ -->
-<div id="permission-screen" class="screen hidden">
-  <span class="perm-icon">📱</span>
-  <h2 class="perm-title">ขออนุญาตใช้งาน</h2>
-  <p class="perm-desc">ระบบ AR Navigation ต้องการสิทธิ์เพื่อ<br>ทำงานได้อย่างสมบูรณ์</p>
-  <div class="perm-items" style="width:100%;max-width:340px">
-    <div class="perm-item">
-      <div class="perm-item-icon">📷</div>
-      <div class="perm-item-text">
-        <h4>กล้องถ่ายรูป</h4>
-        <p>สำหรับแสดงภาพสดเป็นพื้นหลัง AR</p>
-      </div>
-      <div class="perm-item-status" id="perm-camera-icon">⏳</div>
-    </div>
-    <div class="perm-item">
-      <div class="perm-item-icon">🧭</div>
-      <div class="perm-item-text">
-        <h4>เซ็นเซอร์ทิศทาง</h4>
-        <p>เข็มทิศ + ไจโรสโคป สำหรับระบุทิศ</p>
-      </div>
-      <div class="perm-item-status" id="perm-orient-icon">⏳</div>
-    </div>
-    <div class="perm-item">
-      <div class="perm-item-icon">🦶</div>
-      <div class="perm-item-text">
-        <h4>Accelerometer</h4>
-        <p>นับก้าวเดิน (PDR) เพื่อระบุตำแหน่ง</p>
-      </div>
-      <div class="perm-item-status" id="perm-motion-icon">⏳</div>
-    </div>
-  </div>
+<!-- ── SCREEN: Permission ──────────────────────────────── -->
+<div id="screen-permission" class="screen hidden">
+  <h2>ขออนุญาตใช้งาน</h2>
+  <p>ระบบต้องการกล้องสำหรับ AR<br>และเซ็นเซอร์สำหรับระบุทิศทาง</p>
+  <div id="error-msg"></div>
   <button class="btn btn-primary" id="btn-grant">อนุญาตและเริ่มต้น</button>
-  <button class="btn btn-ghost" id="btn-skip-perm">ข้ามขั้นตอนนี้ (ใช้โหมดไม่มี Sensor)</button>
+  <button class="btn btn-secondary" id="btn-skip-perm">ข้ามขั้นตอนนี้</button>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN 4: RELOCALIZATION
-════════════════════════════════════════════════════ -->
-<div id="reloc-screen" class="screen hidden">
-  <div class="reloc-box">
-    <div class="reloc-corner tl"></div>
-    <div class="reloc-corner tr"></div>
-    <div class="reloc-corner bl"></div>
-    <div class="reloc-corner br"></div>
-    <div class="reloc-scan"></div>
-    <div class="reloc-qr">📍</div>
-  </div>
-  <h2 class="reloc-title">ตั้งจุดเริ่มต้น (0,0,0)</h2>
-  <p class="reloc-desc">ยืนที่จุดติด QR Code หน้าโรงพยาบาล<br>กดปุ่มเพื่อ Relocalize ตำแหน่งของคุณ</p>
-  <div class="reloc-status" id="reloc-status">
-    <div class="reloc-dot"></div>
-    <span id="reloc-status-text">รอการยืนยันตำแหน่ง...</span>
-  </div>
-  <button class="btn btn-primary" id="btn-reloc" style="max-width:280px">
-    📍 ตั้งจุดนี้เป็น Origin (0,0,0)
-  </button>
-  <button class="btn btn-ghost" id="btn-skip-reloc">ข้ามขั้นตอนนี้</button>
+<!-- ── SCREEN: Relocalize ──────────────────────────────── -->
+<div id="screen-reloc" class="screen hidden">
+  <p style="font-size:48px">📍</p>
+  <h2>ตั้งจุดเริ่มต้น</h2>
+  <p>ยืนตรงจุด QR Code แล้วกดปุ่มด้านล่าง<br>เพื่อตั้งตำแหน่งของคุณเป็น (0, 0, 0)</p>
+  <div id="error-msg"></div>
+  <button class="btn btn-primary" id="btn-reloc">📍 ตั้งจุดนี้เป็น Origin</button>
+  <button class="btn btn-secondary" id="btn-skip-reloc">ข้ามขั้นตอนนี้</button>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN 5: AR NAVIGATION
-════════════════════════════════════════════════════ -->
-<div id="nav-screen" class="screen hidden">
-  <!-- Camera feed background -->
+<!-- ── SCREEN: Navigation ──────────────────────────────── -->
+<div id="screen-nav" class="screen hidden">
   <video id="camera-feed" autoplay playsinline muted></video>
 
-  <!-- AR Overlay -->
-  <div class="nav-overlay">
-
-    <!-- HUD Top -->
-    <div class="hud-top">
-      <div class="step-badge" id="step-badge">ขั้นตอน 1/1</div>
-      <div class="sensor-pill">
-        <div class="sensor-dot" id="sensor-dot"></div>
-        <span id="sensor-label">PDR</span>
-      </div>
+  <div class="nav-ui">
+    <!-- Top -->
+    <div class="nav-top">
+      <div class="badge" id="step-badge">ขั้นตอน 0/0</div>
+      <div class="badge" id="sensor-status">⬜ Manual</div>
     </div>
 
-    <!-- Arrow Zone -->
-    <div class="arrow-zone">
-      <div class="arrow-wrap">
-        <div class="arrow-ring"></div>
-        <div class="arrow-ring-2"></div>
-        <svg class="arrow-svg" id="nav-arrow" viewBox="0 0 100 100"
-             xmlns="http://www.w3.org/2000/svg">
-          <!-- Arrow shape: pointing UP by default (North) -->
-          <!-- Body -->
-          <rect x="42" y="40" width="16" height="35" rx="4" fill="#00e5ff" opacity=".9"/>
-          <!-- Head -->
-          <polygon points="50,8 74,46 26,46" fill="#00e5ff"/>
-          <!-- Inner highlight -->
-          <polygon points="50,18 64,44 36,44" fill="rgba(255,255,255,.18)"/>
+    <!-- Arrow -->
+    <div class="nav-center">
+      <div id="arrow-wrap">
+        <!-- Arrow SVG: ชี้ขึ้น = ตรงไปข้างหน้า -->
+        <svg id="nav-arrow" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+          <!-- หัวลูกศร -->
+          <polygon points="50,5 90,55 10,55" fill="#00c8ff"/>
+          <!-- ลำลูกศร -->
+          <rect x="38" y="52" width="24" height="50" rx="4" fill="#00c8ff" opacity="0.85"/>
         </svg>
-        <div class="dist-badge" id="dist-badge">... m</div>
-        <div class="arrived-badge" id="arrived-badge">✓ ถึงแล้ว!</div>
       </div>
+      <div id="dist-label">—</div>
     </div>
 
-    <!-- Info Card -->
-    <div class="info-card">
-      <div class="card-progress" id="card-progress"></div>
-      <div class="card-location" id="card-location">—</div>
-      <div class="card-instruction" id="card-instruction">—</div>
-      <div class="card-image-wrap" id="card-image-wrap">
-        <img id="card-img" src="" alt="Landmark">
-        <div class="card-image-label">ตรวจสอบจุดนี้</div>
-      </div>
-      <div class="card-actions">
-        <button class="btn-card-recal" id="btn-recalibrate" title="Recalibrate PDR">🔄</button>
-        <button class="btn-card-next" id="btn-next-step">ถัดไป →</button>
+    <!-- Bottom card -->
+    <div class="nav-card">
+      <div class="progress-dots" id="progress-dots"></div>
+      <div id="wp-label"></div>
+      <div class="nav-card-loc" id="card-loc">—</div>
+      <div class="nav-card-instr" id="card-instr">—</div>
+      <img class="nav-card-img hidden" id="card-img" src="" alt="landmark">
+      <div class="nav-card-row">
+        <button class="btn-recal" id="btn-recal" title="Reset PDR position">🔄</button>
+        <button class="btn-next" id="btn-next">ถัดไป →</button>
       </div>
     </div>
-
-  </div><!-- /nav-overlay -->
-
-  <!-- Proximity Alert (auto popup) -->
-  <div class="prox-alert" id="prox-alert">
-    <h3>📍 ถึงจุดหมายแล้ว!</h3>
-    <p id="prox-alert-text">กำลังเปลี่ยนไปขั้นตอนถัดไป...</p>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN 6: ARRIVED
-════════════════════════════════════════════════════ -->
-<div id="arrived-screen" class="screen hidden">
-  <div class="arrived-ring">
-    <span style="font-size:60px">✓</span>
-  </div>
-  <h2 class="arrived-title">ถึงจุดหมายแล้ว!</h2>
-  <p class="arrived-sub">คุณได้เดินทางมาถึง</p>
-  <div class="arrived-dest" id="arrived-dest">—</div>
-  <button class="btn btn-secondary" onclick="App.goHome()" style="max-width:280px;margin-bottom:12px">
-    🏠 กลับหน้าหลัก
-  </button>
-  <button class="btn btn-ghost" onclick="App.goHome()">เลือกเส้นทางใหม่</button>
-</div>
-
-<!-- Toast notification -->
-<div class="toast hidden" id="toast"></div>
-
-<!-- Debug panel (toggle by tapping 5× on step badge) -->
-<div id="debug-panel" id="debug-panel">
-  <div id="dbg-pos">pos: —</div>
-  <div id="dbg-hdg">hdg: —</div>
-  <div id="dbg-steps">steps: 0</div>
-  <div id="dbg-bearing">bearing: —</div>
-  <div id="dbg-rel">relative: —</div>
+<!-- ── SCREEN: Arrived ──────────────────────────────────── -->
+<div id="screen-arrived" class="screen hidden">
+  <p style="font-size:64px">✅</p>
+  <h2>ถึงปลายทางแล้ว!</h2>
+  <div class="dest" id="arrived-dest">—</div>
+  <button class="btn btn-primary" id="btn-home">← กลับหน้าหลัก</button>
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════
-   CONFIGURATION — ← แก้ไขตรงนี้ก่อนใช้งาน
-═══════════════════════════════════════════════════════════════ */
-const CONFIG = {
-  // URL ของ Google Apps Script Web App ของคุณ
-  // ตัวอย่าง: 'https://script.google.com/macros/s/AKfy.../exec'
-  API_URL: 'https://script.google.com/macros/s/AKfycbx_sSWb4M9IcYnNHkP91zwRlp9Iq-vrp-VqBAQDGMj7AnXcStxOc6rsrWzozTBxCMKN/exec',
+/* ══════════════════════════════════════════════════════════
+   CONFIG — แก้ตรงนี้ก่อนใช้งาน
+══════════════════════════════════════════════════════════ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyQWSaycrGSoAEskXP2x6ItprpD3rddE03DbY2Vqohe5OuPMW10wy3oWKmZT3EeVRSM/exec'; // ← ใส่ URL ของ Apps Script ที่ Deploy แล้ว
 
-  // ใช้ Mock Data แทน API (สำหรับทดสอบออฟไลน์)
-  USE_MOCK: true,
-
-  PROXIMITY_THRESHOLD: 1.5,  // เมตร — ระยะที่ถือว่า "ถึงจุดแล้ว"
-  STEP_LENGTH: 0.72,          // เมตร — ความยาวก้าว (เฉลี่ย)
-  STEP_THRESHOLD: 11.5,       // m/s² — threshold สำหรับตรวจจับก้าว
-  STEP_COOLDOWN: 280,         // ms — ป้องกันนับก้าวซ้ำ
-  DEBUG: false,               // true = แสดง debug panel
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   MOCK DATA — ข้อมูลตัวอย่าง (ใช้เมื่อ USE_MOCK = true)
-   แก้ x,y,z ให้ตรงกับแผนผังจริงของโรงพยาบาล
-═══════════════════════════════════════════════════════════════ */
-const MOCK = {
-  packages: [
-    {
-      package: 'ตรวจสุขภาพปกติ',
-      icon: '🩺',
-      subPackages: ['อายุ 35 ปี ขึ้นไป', 'อายุต่ำกว่า 35 ปี']
-    },
-    {
-      package: 'ฝากครรภ์',
-      icon: '🤰',
-      subPackages: ['ครั้งแรก', 'ครั้งถัดไป']
-    },
-    {
-      package: 'อุบัติเหตุฉุกเฉิน',
-      icon: '🚨',
-      subPackages: ['ผู้ป่วยทั่วไป']
-    }
-  ],
-  routes: {
-    'ตรวจสุขภาพปกติ||อายุ 35 ปี ขึ้นไป': {
-      package: 'ตรวจสุขภาพปกติ',
-      subPackage: 'อายุ 35 ปี ขึ้นไป',
-      steps: [
-        {
-          step: 1,
-          locationName: 'จุดลงทะเบียน',
-          instruction: 'เดินตรงเข้ามาในอาคาร แล้วมองหาเคาน์เตอร์ลงทะเบียนด้านขวามือ',
-          imageURL: 'https://placehold.co/400x180/0d1b2e/00e5ff?text=🏥+จุดลงทะเบียน',
-          x: 0, y: 0, z: 0
-        },
-        {
-          step: 2,
-          locationName: 'หัวมุมทางเดิน',
-          instruction: 'เดินตรงไปด้านหน้าประมาณ 5 เมตร แล้วเลี้ยวซ้ายที่เก้าอี้สีเหลือง',
-          imageURL: 'https://placehold.co/400x180/0d1b2e/ffb300?text=🪑+เก้าอี้สีเหลือง',
-          x: 5, y: 0, z: 0
-        },
-        {
-          step: 3,
-          locationName: 'ห้องชำระเงิน',
-          instruction: 'เดินตรงผ่านประตูกระจกไปจนสุดทางเดิน ห้องชำระเงินอยู่ด้านขวา',
-          imageURL: 'https://placehold.co/400x180/0d1b2e/00ff88?text=💰+ห้องชำระเงิน',
-          x: 5, y: 0, z: 10
-        },
-        {
-          step: 4,
-          locationName: 'ห้องตรวจ A',
-          instruction: 'ออกจากห้องชำระเงิน เลี้ยวขวา เดินไปอีก 3 เมตร ห้องตรวจ A อยู่ด้านซ้าย',
-          imageURL: 'https://placehold.co/400x180/0d1b2e/00e5ff?text=🏥+ห้องตรวจ+A',
-          x: 8, y: 0, z: 10
-        }
-      ]
-    },
-    'ตรวจสุขภาพปกติ||อายุต่ำกว่า 35 ปี': {
-      package: 'ตรวจสุขภาพปกติ',
-      subPackage: 'อายุต่ำกว่า 35 ปี',
-      steps: [
-        { step:1, locationName:'จุดลงทะเบียน', instruction:'มาที่เคาน์เตอร์ลงทะเบียน ด้านซ้ายมือ', imageURL:'https://placehold.co/400x180/0d1b2e/00e5ff?text=จุดลงทะเบียน', x:0,y:0,z:0 },
-        { step:2, locationName:'ห้องตรวจ B', instruction:'เดินตรงไป 8 เมตร ห้องตรวจ B อยู่ด้านขวา', imageURL:'https://placehold.co/400x180/0d1b2e/00e5ff?text=ห้องตรวจ+B', x:0,y:0,z:8 }
-      ]
-    },
-    'ฝากครรภ์||ครั้งแรก': {
-      package: 'ฝากครรภ์', subPackage: 'ครั้งแรก',
-      steps: [
-        { step:1, locationName:'จุดลงทะเบียน', instruction:'มาที่เคาน์เตอร์ลงทะเบียนหน้าตึก', imageURL:'https://placehold.co/400x180/0d1b2e/00e5ff?text=จุดลงทะเบียน', x:0,y:0,z:0 },
-        { step:2, locationName:'แผนกฝากครรภ์', instruction:'เดินตรงไป ขึ้นลิฟต์ชั้น 3 เดินตรงไปปลายทาง', imageURL:'https://placehold.co/400x180/0d1b2e/ff6eb0?text=🤰+แผนกฝากครรภ์', x:3,y:9,z:15 }
-      ]
-    },
-    'อุบัติเหตุฉุกเฉิน||ผู้ป่วยทั่วไป': {
-      package: 'อุบัติเหตุฉุกเฉิน', subPackage: 'ผู้ป่วยทั่วไป',
-      steps: [
-        { step:1, locationName:'ห้องฉุกเฉิน', instruction:'เดินตามป้ายสีแดง "EMERGENCY" เข้าทางประตูด้านขวา', imageURL:'https://placehold.co/400x180/1a0d0d/ff3d5a?text=🚨+ห้องฉุกเฉิน', x:0,y:0,z:5 }
-      ]
-    }
-  }
-};
-
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    STATE
-═══════════════════════════════════════════════════════════════ */
-const State = {
-  screen: 'splash',
-  packages: [],
-  selectedPkg: null,
-  selectedSub: null,
-  route: null,        // { package, subPackage, steps: [] }
-  stepIdx: 0,         // current step index
-  pos: { x: 0, y: 0, z: 0 },
-  heading: 0,         // degrees, 0=North, 90=East
-  stepCount: 0,
-  sensorMode: 'none', // 'full' | 'orient-only' | 'none'
-  cameraActive: false,
-  debugTaps: 0,
+══════════════════════════════════════════════════════════ */
+const S = {
+  route:        null,   // { package, subPackage, steps[] }
+  stepIdx:      0,      // step ปัจจุบัน (index ใน steps[])
+  wpIdx:        0,      // waypoint ปัจจุบัน (index ใน step.waypoints[])
+  pos:          { x: 0, z: 0 },
+  heading:      0,      // degrees 0=North, 90=East (จาก compass)
+  sensorMode:   'none', // 'full' | 'orient' | 'none'
+  stepCount:    0,
+  cameraStream: null,
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════
    API
-═══════════════════════════════════════════════════════════════ */
-const API = {
-  async getPackages() {
-    if (CONFIG.USE_MOCK) return MOCK.packages;
-    const r = await fetch(`${CONFIG.API_URL}?action=packages`);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error);
-    return j.data;
-  },
-  async getRoute(pkg, sub) {
-    if (CONFIG.USE_MOCK) {
-      const key = `${pkg}||${sub}`;
-      const route = MOCK.routes[key];
-      if (!route) throw new Error(`ไม่พบ Route: ${pkg} / ${sub}`);
-      return route;
-    }
-    const u = `${CONFIG.API_URL}?action=route&pkg=${encodeURIComponent(pkg)}&sub=${encodeURIComponent(sub)}`;
-    const r = await fetch(u);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error);
-    return j.data;
-  }
-};
+══════════════════════════════════════════════════════════ */
+async function apiGet(params) {
+  const url = API_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error);
+  return json.data;
+}
 
-/* ═══════════════════════════════════════════════════════════════
-   SENSORS — PDR
-═══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   SENSORS
+══════════════════════════════════════════════════════════ */
 const Sensors = {
-  lastAccelMag: 9.8,
-  lastStepTime: 0,
-  inStep: false,
+  _inStep: false,
+  _lastStepAt: 0,
+  STEP_LEN:   0.72,   // เมตรต่อก้าว
+  STEP_THR:   11.5,   // m/s² threshold
+  STEP_COOL:  280,    // ms cooldown
 
-  async requestAll() {
-    // iOS 13+ requires explicit permission
+  async requestPermissions() {
     let camOk = false, orientOk = false, motionOk = false;
 
-    // Camera
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      stream.getTracks().forEach(t => t.stop());
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      s.getTracks().forEach(t => t.stop());
       camOk = true;
     } catch(e) {}
-    $('perm-camera-icon').textContent = camOk ? '✅' : '❌';
 
-    // DeviceOrientationEvent (compass)
     try {
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const s = await DeviceOrientationEvent.requestPermission();
-        orientOk = s === 'granted';
-      } else {
-        orientOk = true; // Android — no permission needed
-      }
+        orientOk = (await DeviceOrientationEvent.requestPermission()) === 'granted';
+      } else { orientOk = true; }
     } catch(e) { orientOk = true; }
-    $('perm-orient-icon').textContent = orientOk ? '✅' : '❌';
 
-    // DeviceMotionEvent
     try {
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        const s = await DeviceMotionEvent.requestPermission();
-        motionOk = s === 'granted';
-      } else {
-        motionOk = true;
-      }
+        motionOk = (await DeviceMotionEvent.requestPermission()) === 'granted';
+      } else { motionOk = true; }
     } catch(e) { motionOk = true; }
-    $('perm-motion-icon').textContent = motionOk ? '✅' : '❌';
 
     return { camOk, orientOk, motionOk };
   },
 
   start() {
-    // Orientation (compass)
-    const orientHandler = (e) => {
-      // webkitCompassHeading (iOS), or 360-alpha (Android absolute)
+    // Compass heading
+    const onOrient = (e) => {
       if (e.webkitCompassHeading !== undefined) {
-        State.heading = e.webkitCompassHeading;
-        State.sensorMode = State.sensorMode === 'none' ? 'orient-only' : State.sensorMode;
+        S.heading = e.webkitCompassHeading;           // iOS
       } else if (e.absolute && e.alpha !== null) {
-        State.heading = (360 - e.alpha) % 360;
-        State.sensorMode = State.sensorMode === 'none' ? 'orient-only' : State.sensorMode;
+        S.heading = (360 - e.alpha) % 360;            // Android absolute
+      } else if (e.alpha !== null) {
+        S.heading = (360 - e.alpha) % 360;            // Android fallback
       }
-      UI.updateSensorPill();
+      if (S.sensorMode === 'none') {
+        S.sensorMode = 'orient';
+        updateSensorUI();
+      }
     };
-    window.addEventListener('deviceorientationabsolute', orientHandler, true);
-    window.addEventListener('deviceorientation', orientHandler, true);
+    window.addEventListener('deviceorientationabsolute', onOrient, true);
+    window.addEventListener('deviceorientation', onOrient, true);
 
-    // Motion (step detection)
+    // Step counting (PDR)
     window.addEventListener('devicemotion', (e) => {
-      const acc = e.accelerationIncludingGravity;
-      if (!acc) return;
-      const mag = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
-      this._detectStep(mag);
+      const a = e.accelerationIncludingGravity;
+      if (!a) return;
+      const mag = Math.sqrt(a.x**2 + a.y**2 + a.z**2);
+      const now = Date.now();
+
+      if (!this._inStep && mag > this.STEP_THR) {
+        this._inStep = true;
+      } else if (this._inStep && mag < this.STEP_THR - 1.5 && now - this._lastStepAt > this.STEP_COOL) {
+        this._inStep = false;
+        this._lastStepAt = now;
+        S.stepCount++;
+        const rad = S.heading * Math.PI / 180;
+        S.pos.x += Math.sin(rad) * this.STEP_LEN;
+        S.pos.z += Math.cos(rad) * this.STEP_LEN;
+        if (S.sensorMode === 'orient') { S.sensorMode = 'full'; updateSensorUI(); }
+        Nav.tick();
+      }
     });
 
-    // Keyboard fallback for desktop testing (arrow keys simulate steps)
+    // Desktop testing: arrow keys simulate walking
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowUp')    this._addStep(0);
-      if (e.key === 'ArrowDown')  this._addStep(180);
-      if (e.key === 'ArrowLeft')  this._addStep(-90);
-      if (e.key === 'ArrowRight') this._addStep(90);
-    });
-  },
-
-  _detectStep(mag) {
-    const now = Date.now();
-    if (now - this.lastStepTime < CONFIG.STEP_COOLDOWN) return;
-
-    if (!this.inStep && mag > CONFIG.STEP_THRESHOLD) {
-      this.inStep = true;
-    } else if (this.inStep && mag < CONFIG.STEP_THRESHOLD - 1.5) {
-      this.inStep = false;
-      this.lastStepTime = now;
-      State.stepCount++;
-      this._addStep(State.heading);
-    }
-    this.lastAccelMag = mag;
-  },
-
-  _addStep(headingDeg) {
-    const rad = headingDeg * Math.PI / 180;
-    State.pos.x += Math.sin(rad) * CONFIG.STEP_LENGTH;
-    State.pos.z += Math.cos(rad) * CONFIG.STEP_LENGTH; // z increases "forward" (North)
-    Nav.check();
-    if (CONFIG.DEBUG) UI.updateDebug();
-  },
-
-  recalibrate() {
-    State.pos = { x: 0, y: 0, z: 0 };
-    State.stepCount = 0;
-    showToast('🔄 รีเซ็ตตำแหน่งแล้ว');
-    if (CONFIG.DEBUG) UI.updateDebug();
-  }
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   CAMERA
-═══════════════════════════════════════════════════════════════ */
-const Camera = {
-  stream: null,
-  async start() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
-      const vid = $('camera-feed');
-      vid.srcObject = stream;
-      await vid.play();
-      this.stream = stream;
-      State.cameraActive = true;
-    } catch(e) {
-      console.warn('Camera unavailable:', e.message);
-      // Fallback: black background (still functional)
-    }
-  },
-  stop() {
-    if (this.stream) this.stream.getTracks().forEach(t => t.stop());
-  }
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   NAVIGATION LOGIC
-═══════════════════════════════════════════════════════════════ */
-const Nav = {
-  get currentStep() {
-    return State.route?.steps[State.stepIdx];
-  },
-  get nextStep() {
-    return State.route?.steps[State.stepIdx + 1];
-  },
-
-  // Calculate 2D distance (ignoring Y) to a waypoint
-  distanceTo(wp) {
-    const dx = wp.x - State.pos.x;
-    const dz = wp.z - State.pos.z;
-    return Math.sqrt(dx * dx + dz * dz);
-  },
-
-  // Compass bearing from current pos to waypoint (degrees, 0=North)
-  bearingTo(wp) {
-    const dx = wp.x - State.pos.x;
-    const dz = wp.z - State.pos.z;
-    let bearing = Math.atan2(dx, dz) * 180 / Math.PI;
-    if (bearing < 0) bearing += 360;
-    return bearing;
-  },
-
-  // Arrow rotation relative to user's heading
-  relativeAngle(wp) {
-    const bearing = this.bearingTo(wp);
-    let rel = bearing - State.heading;
-    // Normalize to [-180, 180]
-    while (rel > 180)  rel -= 360;
-    while (rel < -180) rel += 360;
-    return rel;
-  },
-
-  check() {
-    if (!State.route) return;
-    const step = this.currentStep;
-    if (!step) return;
-
-    const dist = this.distanceTo(step);
-    const isLast = State.stepIdx >= State.route.steps.length - 1;
-
-    // Update arrow & distance display
-    UI.updateArrow();
-
-    // Proximity trigger
-    if (dist <= CONFIG.PROXIMITY_THRESHOLD) {
-      this.arrivedAtStep();
-    }
-  },
-
-  arrivedAtStep() {
-    const step = this.currentStep;
-    if (!step) return;
-
-    const isLast = State.stepIdx >= State.route.steps.length - 1;
-
-    if (isLast) {
-      // Final destination!
-      showProxAlert(`ถึง "${step.locationName}" แล้ว!`, true);
-      setTimeout(() => App.showArrived(), 2000);
-    } else {
-      showProxAlert(`ถึง "${step.locationName}" — ไปขั้นตอนถัดไป`);
-      setTimeout(() => this.advance(), 1500);
-    }
-  },
-
-  advance() {
-    if (State.stepIdx < State.route.steps.length - 1) {
-      State.stepIdx++;
-      UI.renderStep();
-      hideProxAlert();
-    }
-  }
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   UI RENDERING
-═══════════════════════════════════════════════════════════════ */
-const UI = {
-  renderPackages(packages) {
-    const pkgIcons = {
-      'ตรวจสุขภาพปกติ': '🩺',
-      'ฝากครรภ์': '🤰',
-      'อุบัติเหตุฉุกเฉิน': '🚨'
-    };
-    const list = $('package-list');
-    list.innerHTML = '';
-
-    packages.forEach((p, i) => {
-      const icon = p.icon || pkgIcons[p.package] || '🏥';
-      const subCount = p.subPackages?.length || 0;
-
-      const card = document.createElement('div');
-      card.className = 'pkg-card';
-      card.innerHTML = `
-        <div class="pkg-icon">${icon}</div>
-        <div class="pkg-info">
-          <h3>${p.package}</h3>
-          <p>${subCount} ประเภทย่อย</p>
-        </div>
-        <div class="pkg-arrow">›</div>`;
-
-      const subList = document.createElement('div');
-      subList.className = 'sub-list';
-      subList.id = `sub-${i}`;
-
-      (p.subPackages || []).forEach(sub => {
-        const subCard = document.createElement('div');
-        subCard.className = 'sub-card';
-        subCard.innerHTML = `<span>${sub}</span><span class="sub-steps">เลือก →</span>`;
-        subCard.onclick = () => App.selectRoute(p.package, sub);
-        subList.appendChild(subCard);
-      });
-
-      card.onclick = () => {
-        // Toggle sub list
-        const sl = $(`sub-${i}`);
-        const open = sl.classList.contains('open');
-        document.querySelectorAll('.sub-list').forEach(el => el.classList.remove('open'));
-        document.querySelectorAll('.pkg-card').forEach(el => el.classList.remove('selected'));
-        if (!open) {
-          sl.classList.add('open');
-          card.classList.add('selected');
-          card.querySelector('.pkg-arrow').textContent = '⌄';
-        } else {
-          card.querySelector('.pkg-arrow').textContent = '›';
-        }
-      };
-
-      list.appendChild(card);
-      list.appendChild(subList);
-    });
-
-    // Demo button
-    const demoBtn = document.createElement('button');
-    demoBtn.className = 'btn-demo';
-    demoBtn.textContent = '🧪 ทดสอบ Demo (ตรวจสุขภาพ 35+ ปี)';
-    demoBtn.onclick = () => App.selectRoute('ตรวจสุขภาพปกติ', 'อายุ 35 ปี ขึ้นไป');
-    list.appendChild(demoBtn);
-  },
-
-  renderStep() {
-    const step = Nav.currentStep;
-    if (!step) return;
-    const steps = State.route.steps;
-    const idx = State.stepIdx;
-
-    // Step badge
-    $('step-badge').textContent = `ขั้นตอน ${idx + 1} / ${steps.length}`;
-
-    // Location & instruction
-    $('card-location').textContent = step.locationName;
-    $('card-instruction').textContent = step.instruction;
-
-    // Landmark image
-    const img = $('card-img');
-    if (step.imageURL) {
-      img.src = step.imageURL;
-      img.style.display = 'block';
-      $('card-image-wrap').style.display = 'block';
-    } else {
-      $('card-image-wrap').style.display = 'none';
-    }
-
-    // Progress dots
-    const prog = $('card-progress');
-    prog.innerHTML = '';
-    steps.forEach((_, i) => {
-      const dot = document.createElement('div');
-      dot.className = 'prog-dot' + (i < idx ? ' done' : i === idx ? ' active' : '');
-      prog.appendChild(dot);
-    });
-
-    // Next button
-    const btn = $('btn-next-step');
-    const isLast = idx >= steps.length - 1;
-    btn.textContent = isLast ? '🏁 ถึงที่หมาย' : 'ถัดไป →';
-
-    // Arrow
-    this.updateArrow();
-  },
-
-  updateArrow() {
-    const step = Nav.currentStep;
-    if (!step) return;
-
-    const dist = Nav.distanceTo(step);
-    const relAngle = Nav.relativeAngle(step);
-    const isLast = State.stepIdx >= State.route.steps.length - 1;
-
-    // Rotate arrow SVG
-    $('nav-arrow').style.transform = `rotate(${relAngle}deg)`;
-
-    // Distance badge
-    const distEl = $('dist-badge');
-    const arrivedEl = $('arrived-badge');
-    if (dist <= CONFIG.PROXIMITY_THRESHOLD) {
-      distEl.style.display = 'none';
-      arrivedEl.style.display = 'block';
-    } else {
-      distEl.style.display = 'block';
-      arrivedEl.style.display = 'none';
-      distEl.textContent = dist < 100 ? `${dist.toFixed(1)} m` : `${(dist/1000).toFixed(2)} km`;
-    }
-
-    // Debug
-    if (CONFIG.DEBUG) {
-      $('dbg-pos').textContent = `pos: x=${State.pos.x.toFixed(2)} z=${State.pos.z.toFixed(2)}`;
-      $('dbg-hdg').textContent = `hdg: ${State.heading.toFixed(1)}°`;
-      $('dbg-steps').textContent = `steps: ${State.stepCount}`;
-      $('dbg-bearing').textContent = `bearing: ${Nav.bearingTo(step).toFixed(1)}°`;
-      $('dbg-rel').textContent = `relative: ${relAngle.toFixed(1)}°`;
-    }
-  },
-
-  updateSensorPill() {
-    const pill = document.querySelector('.sensor-pill');
-    const dot = $('sensor-dot');
-    const label = $('sensor-label');
-    if (State.sensorMode === 'full') {
-      dot.style.background = 'var(--green)';
-      label.textContent = 'PDR Active';
-    } else if (State.sensorMode === 'orient-only') {
-      dot.style.background = 'var(--orange)';
-      label.textContent = 'Compass';
-    } else {
-      dot.style.background = 'var(--gray)';
-      label.textContent = 'Manual';
-    }
-  },
-
-  updateDebug() {
-    // Called from sensors
-  }
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   APP CONTROLLER
-═══════════════════════════════════════════════════════════════ */
-const App = {
-  async init() {
-    // Splash progress animation
-    let progress = 0;
-    const fill = $('splash-progress');
-    const interval = setInterval(() => {
-      progress = Math.min(progress + 2, 100);
-      fill.style.width = progress + '%';
-      if (progress >= 100) { clearInterval(interval); this.showSelect(); }
-    }, 30);
-
-    // Load packages in background
-    try {
-      const pkgs = await API.getPackages();
-      State.packages = pkgs;
-    } catch(e) {
-      console.warn('API error, using mock:', e.message);
-      State.packages = MOCK.packages;
-    }
-
-    // Debug tap counter
-    let tapCount = 0, tapTimer;
-    $('step-badge').addEventListener('click', () => {
-      tapCount++;
-      clearTimeout(tapTimer);
-      tapTimer = setTimeout(() => tapCount = 0, 1000);
-      if (tapCount >= 5) {
-        CONFIG.DEBUG = !CONFIG.DEBUG;
-        const dbg = document.getElementById('debug-panel');
-        dbg.style.display = CONFIG.DEBUG ? 'block' : 'none';
-        tapCount = 0;
+      const d = { ArrowUp: 0, ArrowDown: 180, ArrowLeft: 270, ArrowRight: 90 }[e.key];
+      if (d !== undefined) {
+        const rad = d * Math.PI / 180;
+        S.pos.x += Math.sin(rad) * this.STEP_LEN;
+        S.pos.z += Math.cos(rad) * this.STEP_LEN;
+        if (d === 0) S.heading = 0; // face north when pressing up
+        Nav.tick();
       }
     });
   },
 
-  showSelect() {
-    showScreen('select-screen');
-    UI.renderPackages(State.packages);
-  },
-
-  async selectRoute(pkg, sub) {
-    showToast('⏳ กำลังโหลดเส้นทาง...');
-    try {
-      const route = await API.getRoute(pkg, sub);
-      State.route = route;
-      State.stepIdx = 0;
-      State.selectedPkg = pkg;
-      State.selectedSub = sub;
-      showScreen('permission-screen');
-    } catch(e) {
-      showToast('❌ ' + e.message);
-    }
-  },
-
-  async grantPermissions() {
-    const perms = await Sensors.requestAll();
-    State.sensorMode = (perms.orientOk && perms.motionOk) ? 'full'
-                     : perms.orientOk ? 'orient-only' : 'none';
-    showScreen('reloc-screen');
-  },
-
-  skipPermissions() {
-    State.sensorMode = 'none';
-    showScreen('reloc-screen');
-  },
-
-  async startNav(relocated = true) {
-    if (relocated) {
-      State.pos = { x: 0, y: 0, z: 0 };
-      State.stepCount = 0;
-      showToast('📍 ตั้ง Origin (0,0,0) เรียบร้อย');
-    }
-
-    showScreen('nav-screen');
-
-    await Camera.start();
-    Sensors.start();
-    UI.renderStep();
-    UI.updateSensorPill();
-
-    // Auto-update arrow every 500ms (for when sensors aren't available)
-    setInterval(() => UI.updateArrow(), 500);
-  },
-
-  showArrived() {
-    const step = Nav.currentStep || State.route?.steps[State.route.steps.length - 1];
-    $('arrived-dest').textContent = step?.locationName || 'จุดหมาย';
-    showScreen('arrived-screen');
-    Camera.stop();
-  },
-
-  goHome() {
-    State.route = null;
-    State.stepIdx = 0;
-    State.pos = { x: 0, y: 0, z: 0 };
-    Camera.stop();
-    showScreen('select-screen');
-    UI.renderPackages(State.packages);
+  reset() {
+    S.pos = { x: 0, z: 0 };
+    S.stepCount = 0;
   }
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   UTILITIES
-═══════════════════════════════════════════════════════════════ */
-function $(id) { return document.getElementById(id); }
-
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-  const target = $(id);
-  if (target) {
-    target.classList.remove('hidden');
-    target.style.zIndex = 10;
+function updateSensorUI() {
+  const el = ge('sensor-status');
+  if (S.sensorMode === 'full') {
+    el.textContent = '🟢 PDR Active';
+    el.className = 'badge';
+    el.style.color = '#4dff91';
+  } else if (S.sensorMode === 'orient') {
+    el.textContent = '🟡 Compass';
+    el.className = 'badge';
+    el.style.color = '#ffb74d';
+  } else {
+    el.textContent = '⬜ Manual';
+    el.className = 'badge';
+    el.style.color = '#888';
   }
-  State.screen = id;
 }
 
-let toastTimer;
-function showToast(msg, duration = 2500) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.classList.remove('hidden');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.add('hidden'), duration);
+/* ══════════════════════════════════════════════════════════
+   CAMERA
+══════════════════════════════════════════════════════════ */
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    const v = ge('camera-feed');
+    v.srcObject = stream;
+    await v.play();
+    S.cameraStream = stream;
+  } catch(e) {
+    console.warn('Camera not available:', e.message);
+    // ไม่มีกล้องก็ยังนำทางได้ (พื้นหลังดำ)
+  }
 }
 
-let proxTimer;
-function showProxAlert(msg, final = false) {
-  const el = $('prox-alert');
-  $('prox-alert-text').textContent = msg;
-  el.style.display = 'block';
-  el.querySelector('h3').textContent = final ? '🏁 ถึงปลายทางแล้ว!' : '📍 ถึงจุดหมายแล้ว!';
-  clearTimeout(proxTimer);
-  if (!final) proxTimer = setTimeout(hideProxAlert, 3000);
-}
-function hideProxAlert() {
-  $('prox-alert').style.display = 'none';
+function stopCamera() {
+  if (S.cameraStream) {
+    S.cameraStream.getTracks().forEach(t => t.stop());
+    S.cameraStream = null;
+  }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   EVENT LISTENERS
-═══════════════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
-  // Buttons
-  $('btn-grant').onclick = () => App.grantPermissions();
-  $('btn-skip-perm').onclick = () => App.skipPermissions();
-  $('btn-reloc').onclick = () => App.startNav(true);
-  $('btn-skip-reloc').onclick = () => App.startNav(false);
-  $('btn-next-step').onclick = () => {
-    const isLast = State.stepIdx >= State.route.steps.length - 1;
-    if (isLast) App.showArrived();
-    else { Nav.advance(); }
-  };
-  $('btn-recalibrate').onclick = () => Sensors.recalibrate();
+/* ══════════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════════ */
+const PROX = 1.5; // เมตร — ถือว่า "ถึงแล้ว"
 
-  // QR URL parameter auto-select
-  // Usage: index.html?pkg=ตรวจสุขภาพปกติ&sub=อายุ35ปีขึ้นไป
-  const urlParams = new URLSearchParams(window.location.search);
-  const qrPkg = urlParams.get('pkg');
-  const qrSub = urlParams.get('sub');
+const Nav = {
+  get step() { return S.route?.steps[S.stepIdx]; },
+  get wp()   { return this.step?.waypoints[S.wpIdx]; },
 
-  App.init().then(() => {
-    if (qrPkg && qrSub) {
-      // Auto-select from QR code
-      setTimeout(() => App.selectRoute(qrPkg, qrSub), 800);
+  dist2d(wp) {
+    return Math.sqrt((wp.x - S.pos.x)**2 + (wp.z - S.pos.z)**2);
+  },
+
+  bearing(wp) {
+    const dx = wp.x - S.pos.x;
+    const dz = wp.z - S.pos.z;
+    let b = Math.atan2(dx, dz) * 180 / Math.PI;
+    return (b + 360) % 360;
+  },
+
+  relAngle(wp) {
+    let r = this.bearing(wp) - S.heading;
+    while (r >  180) r -= 360;
+    while (r < -180) r += 360;
+    return r;
+  },
+
+  tick() {
+    if (!this.wp) return;
+    const d = this.dist2d(this.wp);
+    updateArrow();
+    if (d <= PROX) this.arrivedWp();
+  },
+
+  arrivedWp() {
+    const step = this.step;
+    const lastWp   = S.wpIdx >= step.waypoints.length - 1;
+    const lastStep = S.stepIdx >= S.route.steps.length - 1;
+
+    if (lastWp && lastStep) {
+      // ถึงปลายทาง
+      showScreen('arrived');
+      ge('arrived-dest').textContent = step.locationName;
+      stopCamera();
+    } else if (lastWp) {
+      // ถึง waypoint สุดท้ายของ step นี้ → ไป step ถัดไป
+      S.stepIdx++;
+      S.wpIdx = 0;
+      renderStep();
+    } else {
+      // ถึง waypoint กลางทาง → ไป waypoint ถัดไปใน step เดียวกัน
+      S.wpIdx++;
+      renderWpHint();
+      updateArrow();
     }
-  });
-});
+  },
 
-/* Prevent zoom on double tap */
-document.addEventListener('touchend', e => {
-  if (e.timeStamp - (document._lastTouch || 0) < 300) e.preventDefault();
-  document._lastTouch = e.timeStamp;
-}, { passive: false });
+  advanceManual() {
+    const step = this.step;
+    if (!step) return;
+    const lastStep = S.stepIdx >= S.route.steps.length - 1;
+    if (lastStep) {
+      showScreen('arrived');
+      ge('arrived-dest').textContent = step.locationName;
+      stopCamera();
+    } else {
+      S.stepIdx++;
+      S.wpIdx = 0;
+      renderStep();
+    }
+  }
+};
+
+/* ══════════════════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════════════════ */
+function renderStep() {
+  const step  = Nav.step;
+  const steps = S.route.steps;
+  if (!step) return;
+
+  ge('step-badge').textContent = `ขั้นตอน ${S.stepIdx + 1}/${steps.length}`;
+  ge('card-loc').textContent   = step.locationName;
+  ge('card-instr').textContent = step.instruction;
+
+  const img = ge('card-img');
+  if (step.imageURL) {
+    img.src = step.imageURL;
+    img.classList.remove('hidden');
+  } else {
+    img.classList.add('hidden');
+  }
+
+  // Progress dots (per step)
+  const dotsEl = ge('progress-dots');
+  dotsEl.innerHTML = '';
+  steps.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < S.stepIdx ? ' done' : i === S.stepIdx ? ' active' : '');
+    dotsEl.appendChild(d);
+  });
+
+  // Next button text
+  ge('btn-next').textContent = S.stepIdx >= steps.length - 1 ? '🏁 ถึงที่หมาย' : 'ถัดไป →';
+
+  renderWpHint();
+  updateArrow();
+}
+
+function renderWpHint() {
+  const step = Nav.step;
+  if (!step) return;
+  const total = step.waypoints.length;
+  if (total > 1) {
+    ge('wp-label').textContent = `📍 จุดนำทาง ${S.wpIdx + 1}/${total}`;
+  } else {
+    ge('wp-label').textContent = '';
+  }
+}
+
+function updateArrow() {
+  const wp = Nav.wp;
+  if (!wp) return;
+
+  const d = Nav.dist2d(wp);
+  const angle = Nav.relAngle(wp);
+
+  ge('nav-arrow').style.transform = `rotate(${angle}deg)`;
+  ge('dist-label').textContent = d < 1000 ? `${d.toFixed(1)} m` : `${(d/1000).toFixed(2)} km`;
+}
+
+// อัปเดต arrow ทุก 500ms แม้ไม่มี step event (เพื่ออัปเดต heading)
+setInterval(() => { if (Nav.wp) updateArrow(); }, 500);
+
+/* ══════════════════════════════════════════════════════════
+   SCREENS
+══════════════════════════════════════════════════════════ */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  ge('screen-' + name).classList.remove('hidden');
+}
+
+function renderPackages(packages) {
+  const list = ge('pkg-list');
+  list.innerHTML = '';
+
+  packages.forEach(p => {
+    const block = document.createElement('div');
+    block.className = 'pkg-block';
+
+    const header = document.createElement('div');
+    header.className = 'pkg-header';
+    header.innerHTML = `<span>${p.package}</span><span>›</span>`;
+
+    const subList = document.createElement('div');
+    subList.className = 'sub-list';
+    p.subPackages.forEach(sub => {
+      const btn = document.createElement('button');
+      btn.className = 'sub-btn';
+      btn.textContent = sub;
+      btn.onclick = () => selectRoute(p.package, sub);
+      subList.appendChild(btn);
+    });
+
+    header.onclick = () => {
+      const open = subList.classList.contains('open');
+      document.querySelectorAll('.sub-list').forEach(el => el.classList.remove('open'));
+      if (!open) subList.classList.add('open');
+      header.querySelector('span:last-child').textContent = (!open) ? '⌄' : '›';
+    };
+
+    block.appendChild(header);
+    block.appendChild(subList);
+    list.appendChild(block);
+  });
+}
+
+async function selectRoute(pkg, sub) {
+  ge('error-msg').textContent = 'กำลังโหลดเส้นทาง...';
+  try {
+    const route = await apiGet({ action: 'route', pkg, sub });
+    S.route    = route;
+    S.stepIdx  = 0;
+    S.wpIdx    = 0;
+    ge('error-msg').textContent = '';
+    showScreen('permission');
+  } catch(e) {
+    ge('error-msg').textContent = '❌ ' + e.message;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+async function init() {
+  showScreen('loading');
+
+  // Auto-select จาก QR Code URL parameter
+  const params = new URLSearchParams(window.location.search);
+  const qrPkg  = params.get('pkg');
+  const qrSub  = params.get('sub');
+
+  try {
+    const packages = await apiGet({ action: 'packages' });
+    renderPackages(packages);
+
+    if (qrPkg && qrSub) {
+      await selectRoute(qrPkg, qrSub);
+    } else {
+      showScreen('select');
+    }
+  } catch(e) {
+    showScreen('select');
+    ge('error-msg').textContent = '❌ โหลดข้อมูลไม่ได้: ' + e.message + '\n\nตรวจสอบ API_URL ใน index.html';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   EVENT LISTENERS
+══════════════════════════════════════════════════════════ */
+ge('btn-grant').onclick = async () => {
+  const p = await Sensors.requestPermissions();
+  if (!p.camOk && !p.orientOk) {
+    ge('error-msg').textContent = 'ไม่สามารถเปิดกล้อง/เซ็นเซอร์ได้ — ลองกดข้าม';
+    return;
+  }
+  ge('error-msg').textContent = '';
+  showScreen('reloc');
+};
+
+ge('btn-skip-perm').onclick = () => {
+  S.sensorMode = 'none';
+  showScreen('reloc');
+};
+
+ge('btn-reloc').onclick = async () => {
+  Sensors.reset();
+  await startCamera();
+  Sensors.start();
+  showScreen('nav');
+  renderStep();
+  updateSensorUI();
+};
+
+ge('btn-skip-reloc').onclick = async () => {
+  await startCamera();
+  Sensors.start();
+  showScreen('nav');
+  renderStep();
+  updateSensorUI();
+};
+
+ge('btn-next').onclick = () => Nav.advanceManual();
+ge('btn-recal').onclick = () => { Sensors.reset(); };
+ge('btn-home').onclick = () => {
+  stopCamera();
+  S.route   = null;
+  S.stepIdx = 0;
+  S.wpIdx   = 0;
+  showScreen('select');
+};
+
+function ge(id) { return document.getElementById(id); }
+
+// Start
+init();
 </script>
 </body>
 </html>
